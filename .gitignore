@@ -1,0 +1,13 @@
+# Bazel output directories.
+bazel-bin
+bazel-out
+bazel-stout-flags
+bazel-testlogs
+        
+# emacs temporary files.
+*~
+
+# Temporary files from VScode.
+.vs
+.vscode
+.DS_Store
