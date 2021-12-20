@@ -13,7 +13,7 @@ namespace stout::flags {
 void Parser::AddAllOrExit(google::protobuf::Message* message) {
   const auto* descriptor = message->GetDescriptor();
 
-  for (size_t i = 0; i < descriptor->field_count(); i++) {
+  for (int i = 0; i < descriptor->field_count(); i++) {
     const auto* field = descriptor->field(i);
 
     const auto& flag = field->options().GetExtension(stout::v1::flag);
@@ -67,7 +67,7 @@ void Parser::AddOrExit(
 void Parser::Parse(int* argc, const char*** argv) {
   // Grab the program name from argv, without removing it.
   program_name_ = *argc > 0
-      ? std::filesystem::path((*argv)[0]).filename()
+      ? std::filesystem::path((*argv)[0]).filename().string()
       : "";
 
   // Keep the arguments that are not being processed as flags.
@@ -288,7 +288,7 @@ void Parser::Parse(
     if (flag.required() && parsed_.count(field) == 0) {
       CHECK(!flag.names().empty());
       std::string names;
-      for (size_t i = 0; i < flag.names().size(); i++) {
+      for (int i = 0; i < flag.names().size(); i++) {
         if (i == 1) {
           names += " (aka ";
         } else if (i > 1) {

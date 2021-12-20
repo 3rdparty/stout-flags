@@ -5,6 +5,8 @@ package test;
 import "google/protobuf/duration.proto";
 import "stout/v1/flag.proto";
 
+///////////////////////////////////////////////////////////////////////////////
+
 message Flags {
   string foo = 1 [
     (stout.v1.flag) = {
@@ -36,6 +38,8 @@ message Flags {
   ];
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 message MissingFlagName {
   string s = 1 [
     (stout.v1.flag) = {
@@ -43,6 +47,18 @@ message MissingFlagName {
     }
   ];
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+message MissingFlagHelp {
+  string s = 1 [
+    (stout.v1.flag) = {
+      names: "name"
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 message DuplicateFlagName {
   string s1 = 1 [
@@ -59,3 +75,5 @@ message DuplicateFlagName {
     }
   ];
 }
+
+///////////////////////////////////////////////////////////////////////////////
