@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package test;
+
+import "google/protobuf/duration.proto";
+import "stout/v1/flag.proto";
+
+message Flags {
+  string foo = 1 [
+    (stout.v1.flag) = {
+      names: [ "foo" ]
+      help: "help"
+      required: true
+    }
+  ];
+
+  bool bar = 2 [
+    (stout.v1.flag) = {
+      names: [ "bar" ]
+      help: "help"
+    }
+  ];
+
+  int32 baz = 3 [
+    (stout.v1.flag) = {
+      names: [ "baz" ]
+      help: "help"
+    }
+  ];
+
+  google.protobuf.Duration duration = 4 [
+    (stout.v1.flag) = {
+      names: [ "duration" ]
+      help: "help"
+    }
+  ];
+}
+
+message MissingFlagName {
+  string s = 1 [
+    (stout.v1.flag) = {
+      help: "help"
+    }
+  ];
+}
+
+message DuplicateFlagName {
+  string s1 = 1 [
+    (stout.v1.flag) = {
+      names: [ "same" ]
+      help: "help"
+    }
+  ];
+
+  string s2 = 2 [
+    (stout.v1.flag) = {
+      names: [ "other","same" ]
+      help: "help"
+    }
+  ];
+}

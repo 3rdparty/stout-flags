@@ -1,0 +1,39 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+proto_library(
+    name = "test_proto",
+    srcs = [":test.proto"],
+    deps = [
+        # Well known protos should be included as deps in the
+        # proto_library rules of the source files importing them.
+        # A list of all @com_google_protobuf well known protos can
+        # seen with:
+        # `bazel query 'kind(proto_library, @com_google_protobuf//:all)'`
+        "@com_google_protobuf//:duration_proto",
+        "//stout/v1:flag_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_proto_library(
+    name = "test_proto_library",
+    deps = [":test_proto"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "flags",
+    srcs = [
+        "missing_flag_name.cc",
+        "duplicate_flag_name.cc",
+        "parse.cc",
+        "validate.cc",
+        "overload_parsing.cc",
+        "help.cc",
+    ],
+    deps = [
+        "//:flags",
+        ":test_proto_library",
+        "@com_github_google_googletest//:gtest_main",
+    ],
+)

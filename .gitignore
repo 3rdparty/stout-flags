@@ -4,7 +4,7 @@ bazel-out
 bazel-stout-flags
 bazel-testlogs
         
-# emacs temporary files.
+# Temporary files from emacs.
 *~
 
 # Temporary files from VScode.
