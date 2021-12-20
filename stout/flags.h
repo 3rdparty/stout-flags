@@ -23,6 +23,8 @@ class Parser {
   static ParserBuilder<Flags> Builder(Flags* flags);
 
   void Parse(int* argc, const char*** argv);
+ 
+  void Parse();
 
  private:
   template <typename Flags>
@@ -163,6 +165,15 @@ class ParserBuilder {
           return f(*dynamic_cast<Flags*>(message));
         });
 
+    return *this;
+  }
+  
+  ParserBuilder& IncludeEnvironmentVariablesWithPrefix(const std::string& prefix) {
+    if (environment_variable_prefix_) { 
+      ctd::cerr << "Encountered redundant environment variable prefix" << std::endl;
+      std::exit(1);
+    }
+    environment_variable_prefix_ = prefix;
     return *this;
   }
 
