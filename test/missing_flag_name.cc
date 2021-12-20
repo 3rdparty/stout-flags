@@ -12,3 +12,14 @@ TEST(FlagsTest, MissingFlagName) {
       "Missing at least one flag name in 'names' for "
       "field 'test.MissingFlagName.s'");
 }
+
+TEST(FlagsTest, MissingFlagHelp) {
+  EXPECT_DEATH(
+      []() {
+        test::MissingFlagHelp missing_flag_help;
+        auto builder = stout::flags::Parser::Builder(&missing_flag_help);
+        builder.Build();
+      }(),
+      "Missing flag 'help' for "
+      "field 'test.MissingFlagHelp.s'");
+}
