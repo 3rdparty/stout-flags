@@ -4,7 +4,65 @@
 #include "absl/strings/match.h"
 #include "glog/logging.h"
 
+////////////////////////////////////////////////////////////////////////
+
 namespace stout::flags {
+
+////////////////////////////////////////////////////////////////////////
+
+void Parser::AddAllOrExit(google::protobuf::Message* message) {
+  const auto* descriptor = message->GetDescriptor();
+
+  for (size_t i = 0; i < descriptor->field_count(); i++) {
+    const auto* field = descriptor->field(i);
+
+    const auto& flag = field->options().GetExtension(stout::v1::flag);
+
+    if (flag.names().empty()) {
+      std::cerr
+          << "Missing at least one flag name in 'names' for field '"
+          << field->full_name() << "'"
+          << std::endl;
+      std::exit(1);
+    }
+
+    if (flag.help().empty()) {
+      std::cerr
+          << "Missing flag 'help' for field '" << field->full_name() << "'"
+          << std::endl;
+      std::exit(1);
+    }
+
+    for (const auto& name : flag.names()) {
+      AddOrExit(name, field, message);
+    }
+
+    for (const auto& name : flag.deprecated_names()) {
+      AddOrExit(name, field, message);
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void Parser::AddOrExit(
+    const std::string& name,
+    const google::protobuf::FieldDescriptor* field,
+    google::protobuf::Message* message) {
+  auto [_, inserted] = fields_.emplace(name, field);
+
+  if (!inserted) {
+    std::cerr
+        << "Encountered duplicate flag name '" << name << "' "
+        << "for field '" << field->full_name() << "'"
+        << std::endl;
+    std::exit(1);
+  }
+
+  messages_.emplace(field, message);
+}
+
+////////////////////////////////////////////////////////////////////////
 
 void Parser::Parse(int* argc, const char*** argv) {
   // Grab the program name from argv, without removing it.
@@ -72,6 +130,7 @@ void Parser::Parse(int* argc, const char*** argv) {
   (*argv)[i++] = nullptr;
 }
 
+////////////////////////////////////////////////////////////////////////
 
 void Parser::Parse(
     const std::multimap<std::string, std::optional<std::string>>& values) {
@@ -269,6 +328,8 @@ void Parser::Parse(
   }
 }
 
+////////////////////////////////////////////////////////////////////////
+
 void Parser::PrintHelp() {
   const int PAD = 5;
 
@@ -336,4 +397,8 @@ void Parser::PrintHelp() {
   std::cerr << help << std::endl;
 }
 
+////////////////////////////////////////////////////////////////////////
+
 } // namespace stout::flags
+
+////////////////////////////////////////////////////////////////////////

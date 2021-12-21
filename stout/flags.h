@@ -10,8 +10,11 @@
 #include "google/protobuf/text_format.h"
 #include "stout/v1/flag.pb.h"
 
-namespace stout {
-namespace flags {
+////////////////////////////////////////////////////////////////////////
+
+namespace stout::flags {
+
+////////////////////////////////////////////////////////////////////////
 
 // Forward declaration.
 template <typename Flags>
@@ -19,9 +22,14 @@ class ParserBuilder;
 
 class Parser {
  public:
+  // Returns a builder for a parser based on the specifid flags; see
+  // 'ParserBuilder' for more details on what can be modified from the
+  // default parser.
   template <typename Flags>
   static ParserBuilder<Flags> Builder(Flags* flags);
 
+  // Parse flags from 'argc' and 'argv' and modify 'argc' and 'argv'
+  // with what ever flags or arguments were not parsed.
   void Parse(int* argc, const char*** argv);
 
  private:
@@ -35,60 +43,19 @@ class Parser {
   }
 
   // Helper that adds all the flags and their descriptors.
-  void AddAllOrExit(google::protobuf::Message* message) {
-    const auto* descriptor = message->GetDescriptor();
-
-    for (size_t i = 0; i < descriptor->field_count(); i++) {
-      const auto* field = descriptor->field(i);
-
-      const auto& flag = field->options().GetExtension(stout::v1::flag);
-
-      if (flag.names().empty()) {
-        std::cerr
-            << "Missing at least one flag name in 'names' for field '"
-            << field->full_name() << "'"
-            << std::endl;
-        std::exit(1);
-      }
-
-      if (flag.help().empty()) {
-        std::cerr
-            << "Missing flag 'help' for field '" << field->full_name() << "'"
-            << std::endl;
-        std::exit(1);
-      }
-
-      for (const auto& name : flag.names()) {
-        AddOrExit(name, field, message);
-      }
-
-      for (const auto& name : flag.deprecated_names()) {
-        AddOrExit(name, field, message);
-      }
-    }
-  }
+  void AddAllOrExit(google::protobuf::Message* message);
 
   // Helper that adds a flag and it's descriptor.
   void AddOrExit(
       const std::string& name,
       const google::protobuf::FieldDescriptor* field,
-      google::protobuf::Message* message) {
-    auto [_, inserted] = fields_.emplace(name, field);
+      google::protobuf::Message* message);
 
-    if (!inserted) {
-      std::cerr
-          << "Encountered duplicate flag name '" << name << "' "
-          << "for field '" << field->full_name() << "'"
-          << std::endl;
-      std::exit(1);
-    }
-
-    messages_.emplace(field, message);
-  }
-
+  // Helper for parsing a normalized form of flags.
   void Parse(
       const std::multimap<std::string, std::optional<std::string>>& values);
 
+  // Helper that prints out help for the flags for this parser.
   void PrintHelp();
 
   // NOTE: need to heap allocate with a 'std::unique_ptr' here because
@@ -98,15 +65,22 @@ class Parser {
   // should be reconsidered.
   std::unique_ptr<stout::v1::StandardFlags> standard_flags_;
 
+  // Flags as a 'google::protobuf::Message' pointer so we can use
+  // reflection to update it when parsing.
   google::protobuf::Message* message_;
 
+  // Map from flag name to the field descriptor for for the flag.
   std::map<std::string, const google::protobuf::FieldDescriptor*> fields_;
 
+  // Map from the field descriptor to the 'google::protobuf::Message'
+  // that we will use to update the flag value via reflection.
   std::map<
       const google::protobuf::FieldDescriptor*,
       google::protobuf::Message*>
       messages_;
 
+  // Map from message descriptors to functions that overload the
+  // default parsing for that descriptor.
   std::map<
       const google::protobuf::Descriptor*,
       std::function<
@@ -115,12 +89,15 @@ class Parser {
               google::protobuf::Message*)>>
       overload_parsing_;
 
+  // Map from help string to function that we use to validate the
+  // parsed flags.
   std::map<
       std::string,
       std::function<
           bool(google::protobuf::Message*)>>
       validate_;
 
+  // Name of the program that we extracted from 'argv'.
   std::string program_name_;
 
   // Helper struct for storing the parsed "name" and normalized
@@ -131,8 +108,12 @@ class Parser {
     std::string text;
   };
 
+  // Map from field descriptor to the helper struct 'Parsed' for
+  // capturing what flags have already been parsed.
   std::map<const google::protobuf::FieldDescriptor*, Parsed> parsed_;
 };
+
+////////////////////////////////////////////////////////////////////////
 
 template <typename Flags>
 class ParserBuilder {
@@ -142,6 +123,8 @@ class ParserBuilder {
     parser_.AddAllOrExit(parser_.message_);
   }
 
+  // Overloads the parsing of the specified type 'T' with the
+  // specified function. Note that 'T' must be a protobuf.
   template <typename T, typename F>
   ParserBuilder& OverloadParsing(F&& f) {
     if (!TryOverloadParsing<T>(std::forward<F>(f))) {
@@ -155,6 +138,8 @@ class ParserBuilder {
     return *this;
   }
 
+  // Adds a validation function to be invoked that will print out the
+  // specified help message if validation fails.
   template <typename F>
   ParserBuilder& Validate(std::string&& help, F&& f) {
     parser_.validate_.emplace(
@@ -166,6 +151,7 @@ class ParserBuilder {
     return *this;
   }
 
+  // Returns a parser.
   Parser Build() {
     // Try to overload parsing of 'google.protobuf.Duration' flag
     // fields and ignore if already overloaded.
@@ -222,10 +208,16 @@ class ParserBuilder {
   Parser parser_;
 };
 
+////////////////////////////////////////////////////////////////////////
+
+// Defined after 'ParserBuilder' to deal with circular dependency.
 template <typename Flags>
 ParserBuilder<Flags> Parser::Builder(Flags* flags) {
   return ParserBuilder<Flags>(flags);
 }
 
-} // namespace flags
-} // namespace stout
+////////////////////////////////////////////////////////////////////////
+
+} // namespace stout::flags
+
+////////////////////////////////////////////////////////////////////////
