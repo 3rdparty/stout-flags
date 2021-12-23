@@ -305,10 +305,8 @@ void Parser::Parse(
   }
 
   // Perform validations.
-  //
-  // TODO(benh): support multiple flags that can be validated together.
   for (auto& [error, f] : validate_) {
-    if (!f(message_)) {
+    if (!f()) {
       errors.insert(error);
     }
   }

@@ -65,10 +65,6 @@ class Parser {
   // should be reconsidered.
   std::unique_ptr<stout::v1::StandardFlags> standard_flags_;
 
-  // Flags as a 'google::protobuf::Message' pointer so we can use
-  // reflection to update it when parsing.
-  google::protobuf::Message* message_;
-
   // Map from flag name to the field descriptor for for the flag.
   std::map<std::string, const google::protobuf::FieldDescriptor*> fields_;
 
@@ -91,11 +87,7 @@ class Parser {
 
   // Map from help string to function that we use to validate the
   // parsed flags.
-  std::map<
-      std::string,
-      std::function<
-          bool(google::protobuf::Message*)>>
-      validate_;
+  std::map<std::string, std::function<bool()>> validate_;
 
   // Name of the program that we extracted from 'argv'.
   std::string program_name_;
@@ -118,9 +110,9 @@ class Parser {
 template <typename Flags>
 class ParserBuilder {
  public:
-  ParserBuilder(google::protobuf::Message* message) {
-    parser_.message_ = message;
-    parser_.AddAllOrExit(parser_.message_);
+  ParserBuilder(Flags* flags)
+    : flags_(flags) {
+    parser_.AddAllOrExit(flags_);
   }
 
   // Overloads the parsing of the specified type 'T' with the
@@ -144,8 +136,8 @@ class ParserBuilder {
   ParserBuilder& Validate(std::string&& help, F&& f) {
     parser_.validate_.emplace(
         std::move(help),
-        [f = std::forward<F>(f)](google::protobuf::Message* message) {
-          return f(*dynamic_cast<Flags*>(message));
+        [f = std::forward<F>(f), flags = flags_]() {
+          return f(*flags);
         });
 
     return *this;
@@ -205,6 +197,8 @@ class ParserBuilder {
     }
   }
 
+ private:
+  Flags* flags_ = nullptr;
   Parser parser_;
 };
 
