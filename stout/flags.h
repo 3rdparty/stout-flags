@@ -65,7 +65,7 @@ class Parser {
   // should be reconsidered.
   std::unique_ptr<stout::v1::StandardFlags> standard_flags_;
 
-  // Map from flag name to the field descriptor for for the flag.
+  // Map from flag name to the field descriptor for the flag.
   std::map<std::string, const google::protobuf::FieldDescriptor*> fields_;
 
   // Map from the field descriptor to the 'google::protobuf::Message'
@@ -103,6 +103,10 @@ class Parser {
   // Map from field descriptor to the helper struct 'Parsed' for
   // capturing what flags have already been parsed.
   std::map<const google::protobuf::FieldDescriptor*, Parsed> parsed_;
+
+  // Optional for including all environment variables for parsing
+  // with specific prefix.
+  std::optional<std::string> environment_variable_prefix_;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -163,6 +167,20 @@ class ParserBuilder {
         });
 
     return std::move(parser_);
+  }
+
+  // Enable parsing environment variable.
+  ParserBuilder& IncludeEnvironmentVariablesWithPrefix(
+      const std::string& prefix) {
+    if (parser_.environment_variable_prefix_) {
+      std::cerr << "Redundant environment variable prefix '"
+                << prefix << "'; already have '"
+                << parser_.environment_variable_prefix_.value() << "'"
+                << std::endl;
+      std::exit(1);
+    }
+    parser_.environment_variable_prefix_ = prefix;
+    return *this;
   }
 
  private:

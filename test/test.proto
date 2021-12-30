@@ -16,21 +16,29 @@ message Flags {
     }
   ];
 
-  bool bar = 2 [
+  string _s = 2 [
+    (stout.v1.flag) = {
+      names: [ "s" ]
+      help: "help"
+      required: false
+    }
+  ];
+
+  bool bar = 3 [
     (stout.v1.flag) = {
       names: [ "bar" ]
       help: "help"
     }
   ];
 
-  int32 baz = 3 [
+  int32 baz = 4 [
     (stout.v1.flag) = {
       names: [ "baz" ]
       help: "help"
     }
   ];
 
-  google.protobuf.Duration duration = 4 [
+  google.protobuf.Duration duration = 5 [
     (stout.v1.flag) = {
       names: [ "duration" ]
       help: "help"

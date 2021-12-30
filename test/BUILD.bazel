@@ -26,6 +26,7 @@ cc_test(
     name = "flags",
     srcs = [
         "duplicate_flag_name.cc",
+        "environment_variables.cc",
         "help.cc",
         "missing_flag_name.cc",
         "overload_parsing.cc",
