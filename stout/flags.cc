@@ -3,7 +3,14 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/match.h"
+#include "absl/strings/str_split.h"
 #include "glog/logging.h"
+
+////////////////////////////////////////////////////////////////////////
+
+// We need this global variable for parsing environment varables.
+// See 'Parser::Parse()' for more details.
+extern char** environ;
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -112,6 +119,46 @@ void Parser::Parse(int* argc, const char*** argv) {
     }
 
     values.emplace(name, value);
+  }
+
+  // Parse environment variables if environment_variable_prefix_
+  // contains the specific prefix of variables we want to parse.
+  if (environment_variable_prefix_) {
+    // Run through all environment variables and select those which has
+    // prefix (environment_variable_prefix_) in the name. Then we grab
+    // correct name and the value and store this pair in `values`.
+    // We use global variable `environ` to have access to the environment
+    // variables to be able to select all necessary variables for
+    // parsing according to the included prefix (see class `Parser`
+    // in `stout/flags.h` which has `environment_variable_prefix_`
+    // variable of type `std::optional<std::string>`).
+    for (char** env = environ; *env != nullptr; ++env) {
+      if (!absl::StrContains(*env, *environment_variable_prefix_)) {
+        continue;
+      }
+
+      // By default all environment variables are as follows:
+      //    name=value
+      //  Hence we're splitting by '=' to correctly get the name and value.
+      const std::vector<std::string> name_value =
+          absl::StrSplit(*env, absl::MaxSplits('=', 1));
+
+      CHECK_EQ(name_value.size(), 2u)
+          << "Expecting all environment variables to have '=' delimiter";
+
+      // Grab the name and the value.
+      absl::string_view name{name_value[0]};
+      std::string value{name_value[1]};
+
+      if (absl::ConsumePrefix(
+              &name,
+              environment_variable_prefix_.value() + "_")) {
+        // It's possible that users can set variables with upper cases.
+        // So we should be sure that names we pass for parsing have
+        // only lower-cases symbols.
+        values.emplace(absl::AsciiStrToLower(name), value);
+      }
+    }
   }
 
   Parse(values);
