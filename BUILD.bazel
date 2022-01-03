@@ -10,9 +10,9 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//stout/v1:flag",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
-        "//stout/v1:flag",
     ],
 )

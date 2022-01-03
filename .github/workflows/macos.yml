@@ -6,24 +6,17 @@ on:
     branches:
       - "**"
     paths-ignore:
-      - '**.md'
-  pull_request:
-    branches:
-      - "main"
-    paths-ignore:
-      - '**.md'
+      - "**.md"
 
 jobs:
   build-and-test:
     name: Build and Test
     runs-on: macos-latest
-    # We want to run on external PRs, but not on our own internal PRs as
-    # they'll be run by the push to the branch
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != '3rdparty/stout-flags'
-
     steps:
       # Checkout the repository under $GITHUB_WORKSPACE.
-      - uses: actions/checkout@v1
+      # We do not checkout recursively submodules because
+      # we don't need the only submodule we have '3rdparty/dev-tools'.
+      - uses: actions/checkout@v2
 
       - name: Check for bazel
         run: bazel --version
