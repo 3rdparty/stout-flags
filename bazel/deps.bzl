@@ -5,6 +5,12 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 def deps(repo_mapping = {}):
+    """Propagate all dependencies.
+
+    Args:
+        repo_mapping: Passed through to all other functions that expect/use
+            repo_mapping, e.g., 'git_repository'
+    """
     maybe(
         http_archive,
         name = "com_google_absl",

@@ -1,8 +1,10 @@
-load("@rules_cc//cc:defs.bzl", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 proto_library(
     name = "test_proto",
     srcs = [":test.proto"],
+    visibility = ["//visibility:public"],
     deps = [
         # Well known protos should be included as deps in the
         # proto_library rules of the source files importing them.
@@ -12,28 +14,27 @@ proto_library(
         "@com_google_protobuf//:duration_proto",
         "//stout/v1:flag_proto",
     ],
-    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "test_proto_library",
-    deps = [":test_proto"],
     visibility = ["//visibility:public"],
+    deps = [":test_proto"],
 )
 
 cc_test(
     name = "flags",
     srcs = [
-        "missing_flag_name.cc",
         "duplicate_flag_name.cc",
+        "help.cc",
+        "missing_flag_name.cc",
+        "overload_parsing.cc",
         "parse.cc",
         "validate.cc",
-        "overload_parsing.cc",
-        "help.cc",
     ],
     deps = [
-        "//:flags",
         ":test_proto_library",
+        "//:flags",
         "@com_github_google_googletest//:gtest_main",
     ],
 )

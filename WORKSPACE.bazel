@@ -3,7 +3,9 @@ workspace(name = "com_github_3rdparty_stout_flags")
 ########################################################################
 
 load("//bazel:repos.bzl", "repos")
+
 repos(external = False)
 
 load("//bazel:deps.bzl", "deps")
+
 deps()
