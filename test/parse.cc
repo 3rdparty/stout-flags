@@ -129,3 +129,158 @@ TEST(FlagsTest, ModifiedArgcArgv) {
   EXPECT_EQ("one", argv[1]);
   EXPECT_EQ("two", argv[2]);
 }
+
+TEST(FlagsTest, UnknownNonNegatedFlag) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo='hello world'",
+      "--unknown",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Encountered unknown flag 'unknown'";
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
+}
+
+TEST(FlagsTest, UnknownNegatedFlag) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo='hello world'",
+      "--no-unknown",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Encountered unknown flag 'unknown' via 'no-unknown'";
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
+}
+
+TEST(FlagsTest, IncorrectNegatedBooleanFlag) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo='hello world'",
+      "--no-bar=some_value",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Encountered negated boolean flag 'no-bar'"
+      " with an unexpected value 'some_value'";
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
+}
+
+TEST(FlagsTest, NonBooleanFlagWithPrefix) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo='hello world'",
+      "--no-baz=some_value",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Failed to parse non-boolean flag 'baz'"
+      " via 'no-baz'";
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
+}
+
+TEST(FlagsTest, NonBooleanFlagWithEmptyValue) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo='hello world'",
+      "--baz=",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Failed to parse non-boolean flag 'baz':"
+      " missing value";
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
+}
+
+TEST(FlagsTest, ProtobufTextFormatParserError) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo=hello world",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Failed to parse flag 'foo' "
+      "from normalized value 'hello world' "
+      "due to protobuf text-format parser error.s.: "
+      "Expected string, got: hello";
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
+}

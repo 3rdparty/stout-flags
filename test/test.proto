@@ -77,3 +77,35 @@ message DuplicateFlagName {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+message DuplicateFlagsDeath {
+  string s = 1 [
+    (stout.v1.flag) = {
+      names: [ "s" ]
+      help: "help"
+    }
+  ];
+
+  string ss = 2 [
+    (stout.v1.flag) = {
+      names: [ "ss", "ss_alias" ]
+      help: "help"
+    }
+  ];
+
+  bool duplicate = 3 [
+    (stout.v1.flag) = {
+      names: [ "duplicate", "other" ]
+      help: "help"
+    }
+  ];
+
+  bool b = 4 [
+    (stout.v1.flag) = {
+      names: [ "b" ]
+      help: "help"
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
