@@ -59,3 +59,25 @@ TEST(FlagsTest, OverloadParsingDuration) {
       parser.Parse(&argc, &argv),
       testing::ContainsRegex(regex));
 }
+
+TEST(FlagsTest, MultipleOverloadParsingDuration) {
+  test::Flags flags;
+
+  auto operation = [&flags]() {
+    auto parser = stout::flags::Parser::Builder(&flags)
+                      .OverloadParsing<google::protobuf::Duration>(
+                          [](const std::string& value, auto* duration) {
+                            return std::optional<std::string>("unimplemented");
+                          })
+                      .OverloadParsing<google::protobuf::Duration>(
+                          [](const std::string& value, auto* duration) {
+                            return std::optional<std::string>("unimplemented");
+                          })
+                      .Build();
+  };
+
+  EXPECT_DEATH(
+      operation(),
+      "Encountered more than one overload parsing for "
+      "google.protobuf.Duration");
+}

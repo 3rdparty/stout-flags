@@ -179,7 +179,7 @@ void Parser::Parse(
           "Failed to parse non-boolean flag '"
           + non_negated_name + "' via '" + name + "'");
       continue;
-    } else if (!value) {
+    } else if (!value.has_value() || value.value().empty()) {
       // Non-boolean flags must have a non-empty value.
       errors.insert(
           "Failed to parse non-boolean flag '" + non_negated_name
