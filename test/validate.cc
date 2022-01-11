@@ -30,11 +30,14 @@ TEST(FlagsTest, Validate) {
   int argc = arguments.size();
   const char** argv = arguments.data();
 
+  const std::string regex =
+      "program: Failed while parsing and validating flags:"
+      "\?\n\?\n"
+      ". 'bar' must be true"
+      "\?\n\?\n"
+      ". 'baz' must be greater than 42";
+
   EXPECT_DEATH(
       parser.Parse(&argc, &argv),
-      "program: Failed while parsing and validating flags:"
-      ".+"
-      "\\* 'bar' must be true"
-      ".+"
-      "\\* 'baz' must be greater than 42");
+      testing::ContainsRegex(regex));
 }

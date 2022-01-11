@@ -48,10 +48,14 @@ TEST(FlagsTest, OverloadParsingDuration) {
   int argc = arguments.size();
   const char** argv = arguments.data();
 
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Failed to parse flag 'duration' from normalized value "
+      "'-1000000001ns' due to overloaded parsing error: unimplemented";
+
   EXPECT_DEATH(
       parser.Parse(&argc, &argv),
-      "program: Failed while parsing and validating flags:"
-      ".+"
-      "\\* Failed to parse flag 'duration' from normalized value "
-      "'-1000000001ns' due to overloaded parsing error: unimplemented");
+      testing::ContainsRegex(regex));
 }
