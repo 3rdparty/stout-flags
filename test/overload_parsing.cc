@@ -48,10 +48,30 @@ TEST(FlagsTest, OverloadParsingDuration) {
   int argc = arguments.size();
   const char** argv = arguments.data();
 
-  EXPECT_DEATH(
-      parser.Parse(&argc, &argv),
-      "program: Failed while parsing and validating flags:"
+// On POSIX systems (e.g. Linux, Cygwin, and Mac), googletest
+// uses the POSIX extended regular expression syntax. To learn
+// about this syntax, you may want to check the link below:
+// https://tinyurl.com/yta5f24r
+// On Windows, googletest uses its own simple regular
+// expression implementation. Check also the link below.
+// https://tinyurl.com/2r59uuuv
+#ifdef _WIN32
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\\n\\n"
+      "\\* Failed to parse flag 'duration' from normalized value "
+      "'-1000000001ns' due to overloaded parsing error: unimplemented";
+#else
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
       ".+"
       "\\* Failed to parse flag 'duration' from normalized value "
-      "'-1000000001ns' due to overloaded parsing error: unimplemented");
+      "'-1000000001ns' due to overloaded parsing error: unimplemented";
+#endif
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      testing::ContainsRegex(regex));
 }

@@ -16,11 +16,30 @@ TEST(FlagsTest, ParseRequired) {
   int argc = arguments.size();
   const char** argv = arguments.data();
 
+// On POSIX systems (e.g. Linux, Cygwin, and Mac), googletest
+// uses the POSIX extended regular expression syntax. To learn
+// about this syntax, you may want to check the link below:
+// https://tinyurl.com/yta5f24r
+// On Windows, googletest uses its own simple regular
+// expression implementation. Check also the link below.
+// https://tinyurl.com/2r59uuuv
+#ifdef _WIN32
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\\n\\n"
+      "\\* Flag 'foo' not parsed but required";
+#else
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      ".+"
+      "\\* Flag 'foo' not parsed but required";
+#endif
+
   EXPECT_DEATH(
       parser.Parse(&argc, &argv),
-      "program: Failed while parsing and validating flags:"
-      ".+"
-      "\\* Flag 'foo' not parsed but required");
+      testing::ContainsRegex(regex));
 }
 
 TEST(FlagsTest, ParseString) {
