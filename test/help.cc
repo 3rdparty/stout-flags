@@ -17,14 +17,17 @@ TEST(FlagsTest, Help) {
   int argc = arguments.size();
   const char** argv = arguments.data();
 
+  const std::string regex =
+      "Usage: program \\[\\.\\.\\.\\]"
+      "\?\n\?\n"
+      "  --\\[no-\\]bar         help\?\n"
+      "  --baz=\\.\\.\\.          help\?\n"
+      "  --duration=\\.\\.\\.     help\?\n"
+      "  --foo=\\.\\.\\.          help\?\n"
+      "  --\\[no-\\]help        whether or not to display this help message";
+
   EXPECT_EXIT(
       parser.Parse(&argc, &argv),
       testing::ExitedWithCode(0),
-      "Usage: program \\[\\.\\.\\.\\]"
-      ".+"
-      "  --\\[no-\\]bar         help.+"
-      "  --baz=\\.\\.\\.          help.+"
-      "  --duration=\\.\\.\\.     help.+"
-      "  --foo=\\.\\.\\.          help.+"
-      "  --\\[no-\\]help        whether or not to display this help message");
+      testing::ContainsRegex(regex));
 }

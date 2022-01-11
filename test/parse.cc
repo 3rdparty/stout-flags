@@ -16,11 +16,15 @@ TEST(FlagsTest, ParseRequired) {
   int argc = arguments.size();
   const char** argv = arguments.data();
 
+  const std::string regex =
+      "program: Failed while parsing "
+      "and validating flags:"
+      "\?\n\?\n"
+      ". Flag 'foo' not parsed but required";
+
   EXPECT_DEATH(
       parser.Parse(&argc, &argv),
-      "program: Failed while parsing and validating flags:"
-      ".+"
-      "\\* Flag 'foo' not parsed but required");
+      testing::ContainsRegex(regex));
 }
 
 TEST(FlagsTest, ParseString) {
