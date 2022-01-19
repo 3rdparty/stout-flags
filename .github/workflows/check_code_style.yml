@@ -21,7 +21,7 @@ jobs:
         run: clang-format --version
 
       # IMPORTANT NOTE
-      # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+      # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-Readme.md
       # If you check the link above you will see that on Ubuntu 20.04
       # we have preinstalled clang-format-10/11/12. By default the symlink
       # to /usr/bin/clang-format-11 is set. That's why we will not be able
@@ -41,6 +41,6 @@ jobs:
 
       # Call the composite action to check files
       # for correct code style. This action (action.yml)
-      # is in `3rdparty/dev-tools/check-code-style` submodule's
-      # directory.
-      - uses: 3rdparty/dev-tools/check-code-style@main
+      # is in `./dev-tools/check-code-style` submodule's
+      # directory from the current submodule commit.
+      - uses: ./dev-tools/check-code-style
