@@ -1,6 +1,7 @@
 #include "stout/flags.h"
 
 #include "absl/strings/ascii.h"
+#include "absl/strings/escaping.h"
 #include "absl/strings/match.h"
 #include "glog/logging.h"
 
@@ -186,7 +187,11 @@ void Parser::Parse(
           + "': missing value");
       continue;
     } else {
-      text = value.value();
+      if (field->type() != google::protobuf::FieldDescriptor::TYPE_STRING) {
+        text = value.value();
+      } else {
+        text = "'" + absl::CEscape(value.value()) + "'";
+      }
     }
 
     CHECK(text);

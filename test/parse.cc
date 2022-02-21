@@ -1,5 +1,6 @@
 #include <array>
 
+#include "absl/strings/escaping.h"
 #include "gtest/gtest.h"
 #include "stout/flags.h"
 #include "test/test.pb.h"
@@ -27,7 +28,7 @@ TEST(FlagsTest, ParseRequired) {
       testing::ContainsRegex(regex));
 }
 
-TEST(FlagsTest, ParseString) {
+TEST(FlagsTest, ParseStringWithSingleQuotes) {
   test::Flags flags;
 
   auto parser = stout::flags::Parser::Builder(&flags).Build();
@@ -35,6 +36,60 @@ TEST(FlagsTest, ParseString) {
   std::array arguments = {
       "/path/to/program",
       "--foo='hello world'",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ("'hello world'", flags.foo());
+}
+
+TEST(FlagsTest, ParseStringWithDoubleQuotes) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo=\"hello world\"",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ("\"hello world\"", flags.foo());
+}
+
+TEST(FlagsTest, ParseStringWithoutSingleOrDoubleQuotes) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo=hello",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ("hello", flags.foo());
+}
+
+TEST(FlagsTest, ParseSpaceStringWithoutAnyQuotes) {
+  test::Flags flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "/path/to/program",
+      "--foo=hello world",
   };
 
   int argc = arguments.size();
@@ -121,7 +176,7 @@ TEST(FlagsTest, ModifiedArgcArgv) {
   parser.Parse(&argc, &argv);
 
   EXPECT_TRUE(flags.bar());
-  EXPECT_EQ("hello world", flags.foo());
+  EXPECT_EQ("'hello world'", flags.foo());
 
   EXPECT_EQ(3, argc);
 
@@ -265,7 +320,8 @@ TEST(FlagsTest, ProtobufTextFormatParserError) {
 
   std::array arguments = {
       "/path/to/program",
-      "--foo=hello world",
+      "--foo='hello'",
+      "--baz=s",
   };
 
   int argc = arguments.size();
@@ -275,10 +331,10 @@ TEST(FlagsTest, ProtobufTextFormatParserError) {
       "program: Failed while parsing "
       "and validating flags:"
       "\?\n\?\n"
-      ". Failed to parse flag 'foo' "
-      "from normalized value 'hello world' "
+      ". Failed to parse flag 'baz' "
+      "from normalized value 's' "
       "due to protobuf text-format parser error.s.: "
-      "Expected string, got: hello";
+      "Expected integer, got: s";
 
   EXPECT_DEATH(
       parser.Parse(&argc, &argv),
