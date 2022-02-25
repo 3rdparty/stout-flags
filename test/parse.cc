@@ -1,6 +1,5 @@
 #include <array>
 
-#include "absl/strings/escaping.h"
 #include "gtest/gtest.h"
 #include "stout/flags.h"
 #include "test/test.pb.h"
