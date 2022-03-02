@@ -164,9 +164,7 @@ TEST(FlagsTest, ModifiedArgcArgv) {
   std::array arguments = {
       "/path/to/program",
       "--foo='hello world'",
-      "one",
       "--bar",
-      "two",
   };
 
   int argc = arguments.size();
@@ -177,11 +175,9 @@ TEST(FlagsTest, ModifiedArgcArgv) {
   EXPECT_TRUE(flags.bar());
   EXPECT_EQ("'hello world'", flags.foo());
 
-  EXPECT_EQ(3, argc);
+  EXPECT_EQ(1, argc);
 
   EXPECT_EQ("/path/to/program", argv[0]);
-  EXPECT_EQ("one", argv[1]);
-  EXPECT_EQ("two", argv[2]);
 }
 
 TEST(FlagsTest, UnknownNonNegatedFlag) {

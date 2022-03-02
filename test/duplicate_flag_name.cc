@@ -11,8 +11,8 @@ TEST(FlagsTest, DuplicateFlagName) {
         auto builder = stout::flags::Parser::Builder(&duplicate_flag_name);
         builder.Build();
       }(),
-      "Encountered duplicate flag name 'same' for "
-      "field 'test.DuplicateFlagName.s2'");
+      "Encountered duplicate flag name 'same' for message "
+      "'test.DuplicateFlagName'");
 }
 
 TEST(FlagsTest, DuplicateSucceed) {
