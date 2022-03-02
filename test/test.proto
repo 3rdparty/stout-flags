@@ -4,6 +4,7 @@ package test;
 
 import "google/protobuf/duration.proto";
 import "stout/v1/flag.proto";
+import "stout/v1/subcommand.proto";
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -114,6 +115,149 @@ message DuplicateFlagsDeath {
       help: "help"
     }
   ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message BuildFlag {
+  int32 other_flag = 1 [
+    (stout.v1.flag) = {
+      names: [ "other_flag" ]
+      help: "help"
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message InfoFlag {
+  string info = 1 [
+    (stout.v1.flag) = {
+      names: [ "info" ]
+      help: "help"
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message SubcommandFlagsWithoutName {
+  oneof subcommand {
+    BuildFlag build = 1 [
+      (stout.v1.subcommand) = {
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message SubcommandFlagsWithoutHelp {
+  oneof subcommand {
+    BuildFlag build = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message SubcommandFlagsWithoutExtension {
+  bool b = 1 [
+    (stout.v1.flag) = {
+      names: [ "b" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    BuildFlag build = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 3;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message FlagsWithIncorrectExtension {
+  bool b = 1 [
+    (stout.v1.subcommand) = {
+      names: [ "build" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    BuildFlag build = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 3 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message IncorrectOneofName {
+  oneof other {
+    BuildFlag build = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message SubcommandFlagExtension {
+  oneof subcommand {
+    BuildFlag build = 1 [
+      (stout.v1.flag) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
