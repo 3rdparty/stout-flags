@@ -5,7 +5,6 @@
 #include "absl/strings/match.h"
 #include "absl/strings/str_split.h"
 #include "glog/logging.h"
-
 ////////////////////////////////////////////////////////////////////////
 
 // We need this global variable for parsing environment varables.
@@ -21,32 +20,86 @@ namespace stout::flags {
 void Parser::AddAllOrExit(google::protobuf::Message* message) {
   const auto* descriptor = message->GetDescriptor();
 
+  auto exit_on_missing_name =
+      [](const google::protobuf::FieldDescriptor* field) {
+        std::cerr
+            << "Missing at least one flag name in 'names' for field '"
+            << field->full_name() << "'"
+            << std::endl;
+        std::exit(1);
+      };
+
+  auto exit_on_missing_help =
+      [](const google::protobuf::FieldDescriptor* field) {
+        std::cerr
+            << "Missing flag 'help' for field '"
+            << field->full_name() << "'"
+            << std::endl;
+        std::exit(1);
+      };
+
   for (int i = 0; i < descriptor->field_count(); i++) {
     const auto* field = descriptor->field(i);
 
-    const auto& flag = field->options().GetExtension(stout::v1::flag);
+    // We need this descriptor for the subcommand's logic.
+    const google::protobuf::OneofDescriptor* real_oneof_field =
+        field->real_containing_oneof();
 
-    if (flag.names().empty()) {
-      std::cerr
-          << "Missing at least one flag name in 'names' for field '"
-          << field->full_name() << "'"
-          << std::endl;
-      std::exit(1);
-    }
+    // Check if the current field of the message is in 'oneof'.
+    if (real_oneof_field != nullptr) {
+      // Check if the name of 'oneof' is 'subcommand'. If no -> exit with
+      // an error.
+      if (real_oneof_field->name() != "subcommand") {
+        std::cerr << "'oneof' field must have 'subcommand' name. "
+                  << "Other names are illegal."
+                  << std::endl;
+        exit(1);
+      } else {
+        // Subcommands must have stout.v1.subcommand extension.
+        if (!field->options().HasExtension(stout::v1::subcommand)) {
+          std::cerr << "Every field of the 'oneof subcommand' must "
+                       "have (stout.v1.subcommand) extension."
+                    << std::endl;
+          exit(1);
+        } else {
+          // Check for missing 'names' and 'help'
+          // in (stout.v1.subcommand) extension.
+          const auto& subcommand =
+              field->options().GetExtension(stout::v1::subcommand);
 
-    if (flag.help().empty()) {
-      std::cerr
-          << "Missing flag 'help' for field '" << field->full_name() << "'"
-          << std::endl;
-      std::exit(1);
-    }
+          if (subcommand.names().empty()) {
+            exit_on_missing_name(field);
+          }
 
-    for (const auto& name : flag.names()) {
-      AddOrExit(name, field, message);
-    }
+          if (subcommand.help().empty()) {
+            exit_on_missing_help(field);
+          }
+        }
+      }
+    } else {
+      if (field->options().HasExtension(stout::v1::subcommand)) {
+        std::cerr << "(stout.v1.subcommand) extension should be inside only"
+                  << " a 'oneof subcommand' field." << std::endl;
+        exit(1);
+      }
 
-    for (const auto& name : flag.deprecated_names()) {
-      AddOrExit(name, field, message);
+      const auto& flag = field->options().GetExtension(stout::v1::flag);
+
+      if (flag.names().empty()) {
+        exit_on_missing_name(field);
+      }
+
+      if (flag.help().empty()) {
+        exit_on_missing_help(field);
+      }
+
+      for (const auto& name : flag.names()) {
+        AddOrExit(name, field, message);
+      }
+
+      for (const auto& name : flag.deprecated_names()) {
+        AddOrExit(name, field, message);
+      }
     }
   }
 }
