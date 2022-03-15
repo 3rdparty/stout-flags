@@ -52,6 +52,12 @@ class Parser {
       const google::protobuf::FieldDescriptor* field,
       google::protobuf::Message* message);
 
+  // Check if 'arg' passed as an argument is the name of the subcommand.
+  // If so the succeeding arguments will be parsed as subcommand flags
+  // untill will be encountered another subcommand or the end of the
+  // arguments.
+  google::protobuf::Message* TryParseSubcommand(const std::string& arg);
+
   // Helper for parsing a normalized form of flags.
   void Parse(
       const std::multimap<std::string, std::optional<std::string>>& values);
@@ -108,6 +114,20 @@ class Parser {
   // Optional for including all environment variables for parsing
   // with specific prefix.
   std::optional<std::string> environment_variable_prefix_;
+
+  // Helper for saving the current message for which subcommand flags are
+  // being parsed.
+  std::optional<google::protobuf::Message*> cur_subcommand_message_;
+
+  // Helper for saving the previous message for which subcommand flags are
+  // being parsed. It's always top message at the beginning.
+  std::optional<google::protobuf::Message*> previous_subcommand_message_;
+
+  // Helper for avoiding duplicate subcommands.
+  std::set<std::string> subcommands_;
+
+  // This flag will be set to true when the first subcommand was encountered.
+  bool parsing_subcommand_flags_ = false;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -167,6 +187,8 @@ class ParserBuilder {
           }
         });
 
+    parser_.cur_subcommand_message_ = flags_;
+    parser_.previous_subcommand_message_ = parser_.cur_subcommand_message_;
     return std::move(parser_);
   }
 

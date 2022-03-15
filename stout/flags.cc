@@ -5,6 +5,7 @@
 #include "absl/strings/match.h"
 #include "absl/strings/str_split.h"
 #include "glog/logging.h"
+
 ////////////////////////////////////////////////////////////////////////
 
 // We need this global variable for parsing environment varables.
@@ -51,14 +52,14 @@ void Parser::AddAllOrExit(google::protobuf::Message* message) {
       // an error.
       if (real_oneof_field->name() != "subcommand") {
         std::cerr << "'oneof' field must have 'subcommand' name. "
-                  << "Other names are illegal."
+                  << "Other names are illegal"
                   << std::endl;
         exit(1);
       } else {
         // Subcommands must have stout.v1.subcommand extension.
         if (!field->options().HasExtension(stout::v1::subcommand)) {
           std::cerr << "Every field of the 'oneof subcommand' must "
-                       "have (stout.v1.subcommand) extension."
+                       "have (stout.v1.subcommand) extension"
                     << std::endl;
           exit(1);
         } else {
@@ -79,7 +80,7 @@ void Parser::AddAllOrExit(google::protobuf::Message* message) {
     } else {
       if (field->options().HasExtension(stout::v1::subcommand)) {
         std::cerr << "(stout.v1.subcommand) extension should be inside only"
-                  << " a 'oneof subcommand' field." << std::endl;
+                  << " a 'oneof subcommand' field" << std::endl;
         exit(1);
       }
 
@@ -125,6 +126,39 @@ void Parser::AddOrExit(
 
 ////////////////////////////////////////////////////////////////////////
 
+google::protobuf::Message* Parser::TryParseSubcommand(const std::string& arg) {
+  CHECK(cur_subcommand_message_);
+
+  if (const google::protobuf::FieldDescriptor* subcommand_field =
+          cur_subcommand_message_
+              .value()
+              ->GetDescriptor()
+              ->FindFieldByName(arg);
+      subcommand_field == nullptr) {
+    // There is no any field with the name 'arg'.
+    return nullptr;
+  } else {
+    if (const google::protobuf::OneofDescriptor* real_oneof =
+            subcommand_field->real_containing_oneof();
+        real_oneof == nullptr) {
+      return nullptr;
+    } else {
+      if (real_oneof->name() != "subcommand") {
+        return nullptr;
+      } else {
+        return cur_subcommand_message_
+            .value()
+            ->GetReflection()
+            ->MutableMessage(
+                cur_subcommand_message_.value(),
+                subcommand_field);
+      }
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////
+
 void Parser::Parse(int* argc, const char*** argv) {
   // Grab the program name from argv, without removing it.
   program_name_ = *argc > 0
@@ -154,6 +188,34 @@ void Parser::Parse(int* argc, const char*** argv) {
 
     // Skip anything that doesn't look like a flag.
     if (arg.find("--") != 0) {
+      if (subcommands_.count(arg) > 0) {
+        std::cerr << "Encountered duplicate subcommand '"
+                  << arg << "'." << std::endl;
+        exit(1);
+      }
+      if (previous_subcommand_message_
+                  .value()
+                  ->GetDescriptor()
+                  ->FindFieldByName(arg)
+              != nullptr
+          && parsing_subcommand_flags_) {
+        std::cerr << "You have already set oneof 'subcommand'"
+                  << " field for the message '"
+                  << previous_subcommand_message_.value()->GetTypeName()
+                  << "'" << std::endl;
+        exit(1);
+      }
+      // It could be probably subcommand.
+      if (google::protobuf::Message* subcommand_message =
+              TryParseSubcommand(arg);
+          subcommand_message != nullptr) {
+        parsing_subcommand_flags_ = true;
+        previous_subcommand_message_ = cur_subcommand_message_;
+        cur_subcommand_message_ = subcommand_message;
+        subcommands_.insert(arg);
+        AddAllOrExit(*cur_subcommand_message_);
+        continue;
+      }
       args.push_back((*argv)[i]);
       continue;
     }

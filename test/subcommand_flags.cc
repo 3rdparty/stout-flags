@@ -1,3 +1,5 @@
+#include <array>
+
 #include "gtest/gtest.h"
 #include "stout/flags.h"
 #include "test/test.pb.h"
@@ -10,7 +12,7 @@ TEST(FlagsTest, MissingSubcommandExtension) {
         builder.Build();
       }(),
       "Every field of the 'oneof subcommand' must have"
-      " .stout.v1.subcommand. extension.");
+      " .stout.v1.subcommand. extension");
 }
 
 TEST(FlagsTest, IncorrectSubcommandExtension) {
@@ -21,7 +23,7 @@ TEST(FlagsTest, IncorrectSubcommandExtension) {
         builder.Build();
       }(),
       ".stout.v1.subcommand. extension should be inside only"
-      " a 'oneof subcommand' field.");
+      " a 'oneof subcommand' field");
 }
 
 TEST(FlagsTest, IncorrectOneofName) {
@@ -32,7 +34,7 @@ TEST(FlagsTest, IncorrectOneofName) {
         builder.Build();
       }(),
       "'oneof' field must have 'subcommand' name. "
-      "Other names are illegal.");
+      "Other names are illegal");
 }
 
 TEST(FlagsTest, SubcommandFlagExtension) {
@@ -43,5 +45,270 @@ TEST(FlagsTest, SubcommandFlagExtension) {
         builder.Build();
       }(),
       "Every field of the 'oneof subcommand' must have"
-      " .stout.v1.subcommand. extension.");
+      " .stout.v1.subcommand. extension");
+}
+
+TEST(FlagsTest, SimpleSubcommandBuildSucceed) {
+  test::SimpleSubcommandSucceed flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--b",
+      "build",
+      "--other_flag=13",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ(1, argc);
+  EXPECT_EQ("program", argv[0]);
+  EXPECT_TRUE(flags.b());
+  EXPECT_EQ(13, flags.build().other_flag());
+}
+
+TEST(FlagsTest, SimpleSubcommandInfoSucceed) {
+  test::SimpleSubcommandSucceed flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--b",
+      "info_flag",
+      "--info=hello world",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ(1, argc);
+  EXPECT_EQ("program", argv[0]);
+  EXPECT_TRUE(flags.b());
+  EXPECT_EQ("hello world", flags.info_flag().info());
+}
+
+TEST(FlagsTest, DuplicateSubcommands) {
+  test::SimpleSubcommandSucceed flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--b",
+      "info_flag",
+      "--info=hello world",
+      "info_flag",
+      "--info=oops",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      "Encountered duplicate subcommand 'info_flag'");
+}
+
+TEST(FlagsTest, DuplicateSubcommandFlags) {
+  test::SimpleSubcommandSucceed flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--b",
+      "build",
+      "--other_flag=1",
+      "--other_flag=2",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      "Encountered duplicate flag 'other_flag'");
+}
+
+TEST(FlagsTest, DuplicateSubcommandFlagNameForEnclosingLevel) {
+  test::DuplicateEnclosingFlagName flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--other_flag=1",
+      "build",
+      "--other_flag=2",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      "Encountered duplicate flag name 'other_flag'"
+      " for field 'test.BuildFlag.other_flag'");
+}
+
+TEST(FlagsTest, SubcommandFailSettingTwoOneofFlagsAtOnce) {
+  test::SimpleSubcommandSucceed flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--b",
+      "build",
+      "--other_flag=1",
+      "info_flag",
+      "--info=hello",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  EXPECT_DEATH(
+      parser.Parse(&argc, &argv),
+      "You have already set oneof 'subcommand' field"
+      " for the message 'test.SimpleSubcommandSucceed'");
+}
+
+TEST(FlagsTest, ComplicatedSubcommandSucceed1) {
+  test::ComplicatedSubcommandMessage flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--flag=hello world",
+      "--other=Ben",
+      "sub1",
+      "--another=Artur",
+      "--num=13",
+      "build",
+      "--other_flag=1",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ(1, argc);
+  EXPECT_EQ("program", argv[0]);
+  EXPECT_EQ("hello world", flags.flag());
+  EXPECT_EQ("Ben", flags.other());
+  EXPECT_TRUE(flags.has_sub1());
+  EXPECT_FALSE(flags.has_sub2());
+  EXPECT_EQ("Artur", flags.sub1().another());
+  EXPECT_TRUE(flags.sub1().has_build());
+  EXPECT_FALSE(flags.sub1().has_info_flag());
+  EXPECT_EQ(13, flags.sub1().num());
+  EXPECT_EQ(1, flags.sub1().build().other_flag());
+}
+
+TEST(FlagsTest, ComplicatedSubcommandSucceed2) {
+  test::ComplicatedSubcommandMessage flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--flag=hello world",
+      "--other=Ben",
+      "sub1",
+      "--another=Artur",
+      "--num=13",
+      "info_flag",
+      "--info=ciao",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ(1, argc);
+  EXPECT_EQ("program", argv[0]);
+  EXPECT_EQ("hello world", flags.flag());
+  EXPECT_EQ("Ben", flags.other());
+  EXPECT_TRUE(flags.has_sub1());
+  EXPECT_FALSE(flags.has_sub2());
+  EXPECT_EQ("Artur", flags.sub1().another());
+  EXPECT_EQ(13, flags.sub1().num());
+  EXPECT_FALSE(flags.sub1().has_build());
+  EXPECT_TRUE(flags.sub1().has_info_flag());
+  EXPECT_EQ("ciao", flags.sub1().info_flag().info());
+}
+
+TEST(FlagsTest, ComplicatedSubcommandSucceed3) {
+  test::ComplicatedSubcommandMessage flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--flag=hello world",
+      "--other=Ben",
+      "sub2",
+      "--s=Artur",
+      "info_flag",
+      "--info=some info",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ(1, argc);
+  EXPECT_EQ("program", argv[0]);
+  EXPECT_EQ("hello world", flags.flag());
+  EXPECT_EQ("Ben", flags.other());
+  EXPECT_TRUE(flags.has_sub2());
+  EXPECT_FALSE(flags.has_sub1());
+  EXPECT_EQ("Artur", flags.sub2().s());
+  EXPECT_FALSE(flags.sub2().has_build());
+  EXPECT_TRUE(flags.sub2().has_info_flag());
+  EXPECT_EQ("some info", flags.sub2().info_flag().info());
+}
+
+TEST(FlagsTest, ComplicatedSubcommandSucceed4) {
+  test::ComplicatedSubcommandMessage flags;
+
+  auto parser = stout::flags::Parser::Builder(&flags).Build();
+
+  std::array arguments = {
+      "program",
+      "--flag=hello world",
+      "--other=Ben",
+      "sub2",
+      "--s=Artur",
+      "build",
+      "--other_flag=13",
+  };
+
+  int argc = arguments.size();
+  const char** argv = arguments.data();
+
+  parser.Parse(&argc, &argv);
+
+  EXPECT_EQ(1, argc);
+  EXPECT_EQ("program", argv[0]);
+  EXPECT_EQ("hello world", flags.flag());
+  EXPECT_EQ("Ben", flags.other());
+  EXPECT_TRUE(flags.has_sub2());
+  EXPECT_FALSE(flags.has_sub1());
+  EXPECT_EQ("Artur", flags.sub2().s());
+  EXPECT_TRUE(flags.sub2().has_build());
+  EXPECT_FALSE(flags.sub2().has_info_flag());
+  EXPECT_EQ(13, flags.sub2().build().other_flag());
 }

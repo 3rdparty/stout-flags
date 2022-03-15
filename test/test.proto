@@ -261,3 +261,147 @@ message SubcommandFlagExtension {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+message SimpleSubcommandSucceed {
+  bool b = 1 [
+    (stout.v1.flag) = {
+      names: [ "b" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    BuildFlag build = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 3 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message ComplicatedSubcommandMessage {
+  string flag = 1 [
+    (stout.v1.flag) = {
+      names: [ "flag" ]
+      help: "help"
+    }
+  ];
+
+  string other = 2 [
+    (stout.v1.flag) = {
+      names: [ "other" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    SubcommandSubMessage1 sub1 = 3 [
+      (stout.v1.subcommand) = {
+        names: [ "sub1" ]
+        help: "help"
+      }
+    ];
+    SubcommandSubMessage2 sub2 = 4 [
+      (stout.v1.subcommand) = {
+        names: [ "sub2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message SubcommandSubMessage1 {
+  string another = 1 [
+    (stout.v1.flag) = {
+      names: [ "another" ]
+      help: "help"
+    }
+  ];
+
+  int32 num = 2 [
+    (stout.v1.flag) = {
+      names: [ "num" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    BuildFlag build = 3 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 4 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message SubcommandSubMessage2 {
+  string s = 1 [
+    (stout.v1.flag) = {
+      names: [ "s" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    BuildFlag build = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 3 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message DuplicateEnclosingFlagName {
+  int32 other_flag = 1 [
+    (stout.v1.flag) = {
+      names: [ "other_flag" ]
+      help: "help"
+    }
+  ];
+
+  oneof subcommand {
+    BuildFlag build = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+    InfoFlag info_flag = 3 [
+      (stout.v1.subcommand) = {
+        names: [ "info_flag" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
