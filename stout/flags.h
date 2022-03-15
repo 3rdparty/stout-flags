@@ -21,6 +21,7 @@ namespace stout::flags {
 template <typename Flags>
 class ParserBuilder;
 
+
 class Parser {
  public:
   // Returns a builder for a parser based on the specifid flags; see
@@ -37,24 +38,40 @@ class Parser {
   template <typename Flags>
   friend class ParserBuilder;
 
+  // For building nested parsers.
+  template <typename Flags>
+  static ParserBuilder<Flags> Builder(
+      Flags* flags,
+      bool is_nested) {
+    return ParserBuilder<Flags>(flags, Parser{is_nested});
+  }
+
   Parser()
     : standard_flags_(new stout::v1::StandardFlags()) {
     // Add all the "standard flags" first, e.g., --help.
-    AddAllOrExit(standard_flags_.get());
+    TryFillFieldsAndMessages(standard_flags_.get());
   }
 
-  // Helper that adds all the flags and their descriptors.
-  void AddAllOrExit(google::protobuf::Message* message);
+  // Constructor for nested parsers.
+  Parser(bool is_nested)
+    : standard_flags_(new stout::v1::StandardFlags()),
+      is_nested_(is_nested) {
+    // Add all the "standard flags" for nested messages too,
+    // e.g., --help.
+    TryFillFieldsAndMessages(standard_flags_.get());
+  }
 
-  // Helper that adds a flag and it's descriptor.
-  void AddOrExit(
-      const std::string& name,
-      const google::protobuf::FieldDescriptor* field,
-      google::protobuf::Message* message);
+  // Helper that fill fields_ and messages_ helpers.
+  void TryFillFieldsAndMessages(google::protobuf::Message* message);
+
+  // Helper that gets 'google::protobuf::Message*' based on
+  // subcommand argument from the command line.
+  google::protobuf::Message*
+  GetMessageForSubcommand(const std::string& arg);
 
   // Helper for parsing a normalized form of flags.
-  void Parse(
-      const std::multimap<std::string, std::optional<std::string>>& values);
+  void
+  Parse(const std::multimap<std::string, std::optional<std::string>>& values);
 
   // Helper that prints out help for the flags for this parser.
   void PrintHelp();
@@ -68,6 +85,12 @@ class Parser {
 
   // Map from flag name to the field descriptor for the flag.
   std::map<std::string, const google::protobuf::FieldDescriptor*> fields_;
+
+  // Map from subcommand field name to the field descriptor. This helper
+  // allows us to easily grab 'google::protobuf::Message*' for parsing
+  // arguments from the command line after the specific subcommand.
+  std::map<std::string, const google::protobuf::FieldDescriptor*>
+      subcommand_fields_;
 
   // Map from the field descriptor to the 'google::protobuf::Message'
   // that we will use to update the flag value via reflection.
@@ -108,16 +131,45 @@ class Parser {
   // Optional for including all environment variables for parsing
   // with specific prefix.
   std::optional<std::string> environment_variable_prefix_;
+
+  // Map from nested parser to it's all possible names. Depending on the
+  // subcommand defined by the users we can grab specific parser and do
+  // parsing for the next arguments in the command line.
+  std::map<std::unique_ptr<Parser>, std::set<std::string>> nested_parsers_;
+
+  // Helper for saving the message for which flags or pos args are going
+  // to be parsed.
+  google::protobuf::Message* message_for_parsing_ = nullptr;
+
+  // Flag will be set to 'true' if the nested parser was created.
+  bool is_nested_ = false;
 };
 
 ////////////////////////////////////////////////////////////////////////
+
 
 template <typename Flags>
 class ParserBuilder {
  public:
   ParserBuilder(Flags* flags)
     : flags_(flags) {
-    parser_.AddAllOrExit(flags_);
+    // When we construct top-level parser, we need to specify
+    // 'Parser::message_for_parsing_' for parsing top-level flags
+    // and in order to easily grab 'google::protobuf::Message*'
+    // pointer for nested parsers too.
+    // NOTE: 'Parser::message_for_parsing_' will be specified for
+    // nested parsers only in runtime, when we actually do the par-
+    // sing because of 'oneof' implementation (we can not store at
+    // a time 'google::protobuf::Message*' pointers for all 'oneof'
+    // fields).
+    parser_.message_for_parsing_ = flags_;
+    parser_.TryFillFieldsAndMessages(flags_);
+  }
+
+  ParserBuilder(Flags* flags, Parser&& parser)
+    : flags_(flags),
+      parser_(std::move(parser)) {
+    parser_.TryFillFieldsAndMessages(flags_);
   }
 
   // Overloads the parsing of the specified type 'T' with the
