@@ -4,6 +4,7 @@ package test;
 
 import "google/protobuf/duration.proto";
 import "stout/v1/flag.proto";
+import "stout/v1/positional_argument.proto";
 
 ///////////////////////////////////////////////////////////////////////////////
 

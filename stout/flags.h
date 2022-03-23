@@ -9,6 +9,7 @@
 #include "google/protobuf/io/tokenizer.h"
 #include "google/protobuf/text_format.h"
 #include "stout/v1/flag.pb.h"
+#include "stout/v1/positional_argument.pb.h"
 
 ////////////////////////////////////////////////////////////////////////
 
