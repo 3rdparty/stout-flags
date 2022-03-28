@@ -47,6 +47,47 @@ class Parser {
   // Helper that adds all the flags and their descriptors.
   void AddAllOrExit(google::protobuf::Message* message);
 
+  // Try to fill messages_ and fields_ helpers depending on the extension
+  // that users specify (stout::v1::flag or stout::v1::argument are allowed).
+  template <typename T>
+  void TryFillFieldAndMessageHelpers(
+      const T* field_extension,
+      const google::protobuf::FieldDescriptor* field,
+      google::protobuf::Message* message) {
+    /* clang-format off */
+    if (!std::is_same_v<const stout::v1::Flag*, decltype(field_extension)> &&
+        !std::is_same_v<const stout::v1::Argument*,
+                        decltype(field_extension)>){
+      std::cerr << "Expected 'const stout::v1::Flag*' " 
+                << "or 'const stout::v1::Argument*' type" << std::endl;
+      exit(1);
+    }
+    /* clang-format on */
+    if (field_extension->names().empty()) {
+      std::cerr
+          << "Missing at least one name in 'names' for field '"
+          << field->full_name() << "'"
+          << std::endl;
+      std::exit(1);
+    }
+
+    if (field_extension->help().empty()) {
+      std::cerr
+          << "Missing 'help' for field '"
+          << field->full_name() << "'"
+          << std::endl;
+      std::exit(1);
+    }
+
+    for (const auto& name : field_extension->names()) {
+      AddOrExit(name, field, message);
+    }
+
+    for (const auto& name : field_extension->deprecated_names()) {
+      AddOrExit(name, field, message);
+    }
+  }
+
   // Helper that adds a flag and it's descriptor.
   void AddOrExit(
       const std::string& name,
@@ -59,9 +100,17 @@ class Parser {
   // arguments.
   google::protobuf::Message* TryParseSubcommand(const std::string& arg);
 
+  // Helper that returns field pointer if current argument is a positional
+  // argument.
+  const google::protobuf::FieldDescriptor* GetFieldForPositionalArgument(
+      const std::string& arg);
+
   // Helper for parsing a normalized form of flags.
   void Parse(
       const std::multimap<std::string, std::optional<std::string>>& values);
+
+  // Helper for parsing positional arguments.
+  void TryParsePositionalArguments();
 
   // Helper that prints out help for the flags for this parser.
   void PrintHelp();
@@ -75,6 +124,16 @@ class Parser {
 
   // Map from flag name to the field descriptor for the flag.
   std::map<std::string, const google::protobuf::FieldDescriptor*> fields_;
+
+  // Map from positional argument value to the field descriptor for this name.
+  // std::map<std::string, const google::protobuf::FieldDescriptor*>
+  //     pos_arg_fields_;
+
+  // Map from field pointer to the value of a positional argument.
+  std::map<
+      const google::protobuf::FieldDescriptor*,
+      std::string>
+      pos_arg_fields_;
 
   // Map from the field descriptor to the 'google::protobuf::Message'
   // that we will use to update the flag value via reflection.
@@ -109,7 +168,8 @@ class Parser {
   };
 
   // Map from field descriptor to the helper struct 'Parsed' for
-  // capturing what flags have already been parsed.
+  // capturing what flags or positional arguments have already
+  // been parsed.
   std::map<const google::protobuf::FieldDescriptor*, Parsed> parsed_;
 
   // Optional for including all environment variables for parsing
@@ -118,14 +178,18 @@ class Parser {
 
   // Helper for saving the current message for which subcommand flags are
   // being parsed.
-  std::optional<google::protobuf::Message*> cur_subcommand_message_;
+  std::optional<google::protobuf::Message*> cur_message_;
 
   // Helper for saving the previous message for which subcommand flags are
   // being parsed. It's always top message at the beginning.
-  std::optional<google::protobuf::Message*> previous_subcommand_message_;
+  std::optional<google::protobuf::Message*> previous_message_;
 
   // Helper for avoiding duplicate subcommands.
   std::set<std::string> subcommands_;
+
+  // Current index of the positional argument to parse. Will be always
+  // increased when a new positional argument arrives.
+  std::size_t cur_index_pos_arg_ = 1;
 
   // This flag will be set to true when the first subcommand was encountered.
   bool parsing_subcommand_flags_ = false;
@@ -188,8 +252,8 @@ class ParserBuilder {
           }
         });
 
-    parser_.cur_subcommand_message_ = flags_;
-    parser_.previous_subcommand_message_ = parser_.cur_subcommand_message_;
+    parser_.cur_message_ = flags_;
+    parser_.previous_message_ = parser_.cur_message_;
     return std::move(parser_);
   }
 

@@ -9,7 +9,7 @@ TEST(FlagsTest, MissingFlagName) {
         auto builder = stout::flags::Parser::Builder(&missing_flag_name);
         builder.Build();
       }(),
-      "Missing at least one flag name in 'names' for "
+      "Missing at least one name in 'names' for "
       "field 'test.MissingFlagName.s'");
 }
 
@@ -20,7 +20,7 @@ TEST(FlagsTest, MissingFlagHelp) {
         auto builder = stout::flags::Parser::Builder(&missing_flag_help);
         builder.Build();
       }(),
-      "Missing flag 'help' for "
+      "Missing 'help' for "
       "field 'test.MissingFlagHelp.s'");
 }
 
@@ -31,7 +31,7 @@ TEST(FlagsTest, MissingSubcommandFlagName) {
         auto builder = stout::flags::Parser::Builder(&missing_flag_name);
         builder.Build();
       }(),
-      "Missing at least one flag name in 'names' for "
+      "Missing at least one name in 'names' for "
       "field 'test.SubcommandFlagsWithoutName.build'");
 }
 
@@ -42,6 +42,6 @@ TEST(FlagsTest, MissingSubcommandFlagHelp) {
         auto builder = stout::flags::Parser::Builder(&missing_flag_help);
         builder.Build();
       }(),
-      "Missing flag 'help' for "
+      "Missing 'help' for "
       "field 'test.SubcommandFlagsWithoutHelp.info_flag'");
 }

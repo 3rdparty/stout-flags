@@ -21,24 +21,6 @@ namespace stout::flags {
 void Parser::AddAllOrExit(google::protobuf::Message* message) {
   const auto* descriptor = message->GetDescriptor();
 
-  auto exit_on_missing_name =
-      [](const google::protobuf::FieldDescriptor* field) {
-        std::cerr
-            << "Missing at least one flag name in 'names' for field '"
-            << field->full_name() << "'"
-            << std::endl;
-        std::exit(1);
-      };
-
-  auto exit_on_missing_help =
-      [](const google::protobuf::FieldDescriptor* field) {
-        std::cerr
-            << "Missing flag 'help' for field '"
-            << field->full_name() << "'"
-            << std::endl;
-        std::exit(1);
-      };
-
   for (int i = 0; i < descriptor->field_count(); i++) {
     const auto* field = descriptor->field(i);
 
@@ -54,14 +36,14 @@ void Parser::AddAllOrExit(google::protobuf::Message* message) {
         std::cerr << "'oneof' field must have 'subcommand' name. "
                   << "Other names are illegal"
                   << std::endl;
-        exit(1);
+        std::exit(1);
       } else {
         // Subcommands must have stout.v1.subcommand extension.
         if (!field->options().HasExtension(stout::v1::subcommand)) {
           std::cerr << "Every field of the 'oneof subcommand' must "
                        "have (stout.v1.subcommand) extension"
                     << std::endl;
-          exit(1);
+          std::exit(1);
         } else {
           // Check for missing 'names' and 'help'
           // in (stout.v1.subcommand) extension.
@@ -69,11 +51,19 @@ void Parser::AddAllOrExit(google::protobuf::Message* message) {
               field->options().GetExtension(stout::v1::subcommand);
 
           if (subcommand.names().empty()) {
-            exit_on_missing_name(field);
+            std::cerr
+                << "Missing at least one name in 'names' for field '"
+                << field->full_name() << "'"
+                << std::endl;
+            std::exit(1);
           }
 
           if (subcommand.help().empty()) {
-            exit_on_missing_help(field);
+            std::cerr
+                << "Missing 'help' for field '"
+                << field->full_name() << "'"
+                << std::endl;
+            std::exit(1);
           }
         }
       }
@@ -81,25 +71,31 @@ void Parser::AddAllOrExit(google::protobuf::Message* message) {
       if (field->options().HasExtension(stout::v1::subcommand)) {
         std::cerr << "(stout.v1.subcommand) extension should be inside only"
                   << " a 'oneof subcommand' field" << std::endl;
-        exit(1);
+        std::exit(1);
       }
 
-      const auto& flag = field->options().GetExtension(stout::v1::flag);
-
-      if (flag.names().empty()) {
-        exit_on_missing_name(field);
+      if (field->options().HasExtension(stout::v1::flag)) {
+        const auto& flag = field->options().GetExtension(stout::v1::flag);
+        TryFillFieldAndMessageHelpers(&flag, field, message);
       }
 
-      if (flag.help().empty()) {
-        exit_on_missing_help(field);
-      }
+      if (field->options().HasExtension(stout::v1::argument)) {
+        if (field->type() != google::protobuf::FieldDescriptor::TYPE_STRING) {
+          std::cerr << "Field '" << field->full_name()
+                    << "' with 'stout::v1::argument' extension "
+                    << "must have string type" << std::endl;
+          std::exit(1);
+        }
+        const auto& argument =
+            field->options().GetExtension(stout::v1::argument);
 
-      for (const auto& name : flag.names()) {
-        AddOrExit(name, field, message);
-      }
+        CHECK_GE(argument.position(), 1u)
+            << "Field '" << field->full_name()
+            << "' should have option "
+            << "'position' greater or "
+            << "equal than 1";
 
-      for (const auto& name : flag.deprecated_names()) {
-        AddOrExit(name, field, message);
+        TryFillFieldAndMessageHelpers(&argument, field, message);
       }
     }
   }
@@ -127,10 +123,10 @@ void Parser::AddOrExit(
 ////////////////////////////////////////////////////////////////////////
 
 google::protobuf::Message* Parser::TryParseSubcommand(const std::string& arg) {
-  CHECK(cur_subcommand_message_);
+  CHECK(cur_message_);
 
   if (const google::protobuf::FieldDescriptor* subcommand_field =
-          cur_subcommand_message_
+          cur_message_
               .value()
               ->GetDescriptor()
               ->FindFieldByName(arg);
@@ -146,15 +142,35 @@ google::protobuf::Message* Parser::TryParseSubcommand(const std::string& arg) {
       if (real_oneof->name() != "subcommand") {
         return nullptr;
       } else {
-        return cur_subcommand_message_
+        return cur_message_
             .value()
             ->GetReflection()
             ->MutableMessage(
-                cur_subcommand_message_.value(),
+                cur_message_.value(),
                 subcommand_field);
       }
     }
   }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+const google::protobuf::FieldDescriptor* Parser::GetFieldForPositionalArgument(
+    const std::string& arg) {
+  const google::protobuf::Descriptor* descriptor =
+      cur_message_.value()->GetDescriptor();
+  for (int i = 0; i < descriptor->field_count(); ++i) {
+    const google::protobuf::FieldDescriptor* field =
+        descriptor->field(i);
+    if (field->options().HasExtension(stout::v1::argument)) {
+      const stout::v1::Argument& argument =
+          field->options().GetExtension(stout::v1::argument);
+      if (argument.position() == cur_index_pos_arg_) {
+        return field;
+      }
+    }
+  }
+  return nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -191,9 +207,9 @@ void Parser::Parse(int* argc, const char*** argv) {
       if (subcommands_.count(arg) > 0) {
         std::cerr << "Encountered duplicate subcommand '"
                   << arg << "'." << std::endl;
-        exit(1);
+        std::exit(1);
       }
-      if (previous_subcommand_message_
+      if (previous_message_
                   .value()
                   ->GetDescriptor()
                   ->FindFieldByName(arg)
@@ -201,19 +217,25 @@ void Parser::Parse(int* argc, const char*** argv) {
           && parsing_subcommand_flags_) {
         std::cerr << "You have already set oneof 'subcommand'"
                   << " field for the message '"
-                  << previous_subcommand_message_.value()->GetTypeName()
+                  << previous_message_.value()->GetTypeName()
                   << "'" << std::endl;
-        exit(1);
+        std::exit(1);
       }
       // It could be probably subcommand.
       if (google::protobuf::Message* subcommand_message =
               TryParseSubcommand(arg);
           subcommand_message != nullptr) {
         parsing_subcommand_flags_ = true;
-        previous_subcommand_message_ = cur_subcommand_message_;
-        cur_subcommand_message_ = subcommand_message;
+        previous_message_ = cur_message_;
+        cur_message_ = subcommand_message;
         subcommands_.insert(arg);
-        AddAllOrExit(*cur_subcommand_message_);
+        AddAllOrExit(*cur_message_);
+        continue;
+      }
+      if (const auto* field = GetFieldForPositionalArgument(arg);
+          field != nullptr) {
+        pos_arg_fields_.emplace(field, arg);
+        ++cur_index_pos_arg_;
         continue;
       }
       args.push_back((*argv)[i]);
@@ -276,6 +298,9 @@ void Parser::Parse(int* argc, const char*** argv) {
     }
   }
 
+  // Parse positional arguments.
+  TryParsePositionalArguments();
+  // Parse flags.
   Parse(values);
 
   // Update 'argc' and 'argv' if we successfully loaded the flags.
@@ -291,6 +316,91 @@ void Parser::Parse(int* argc, const char*** argv) {
   // arguments that were processed here but it's not like they would
   // have gotten deleted in normal operations anyway.
   (*argv)[i++] = nullptr;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void Parser::TryParsePositionalArguments() {
+  for (const auto& [field, value] : pos_arg_fields_) {
+    // Normalize value.
+    std::string normalized_value = "'" + absl::CEscape(value) + "'";
+
+    // Parse the value using an error collector that aggregates the
+    // error for us to print out later.
+    struct ErrorCollector : public google::protobuf::io::ErrorCollector {
+      void AddError(
+          int /* line */,
+          int /* column */,
+          const std::string& message) override {
+        error += message;
+      }
+
+      void AddWarning(
+          int line,
+          int column,
+          const std::string& message) override {
+        // For now we treat all warnings as errors.
+        AddError(line, column, message);
+      }
+
+      std::string error;
+    } error_collector;
+
+    google::protobuf::TextFormat::Parser text_format_parser;
+    text_format_parser.RecordErrorsTo(&error_collector);
+
+    if (!text_format_parser.ParseFieldValueFromString(
+            normalized_value,
+            field,
+            messages_[field])) {
+      std::cerr << "Failed to parse positional argument '" << value
+                << "' from normalized value '" << normalized_value
+                << "' due to protobuf text-format parser error(s): "
+                << error_collector.error << std::endl;
+    } else {
+      // Successfully parsed!
+      parsed_.emplace(field, Parsed{value, normalized_value});
+    }
+  }
+
+  std::set<std::string> errors;
+
+  // Ensure required positional arguments are present.
+  for (const auto& [_, field] : fields_) {
+    const stout::v1::Argument& argument =
+        field->options().GetExtension(stout::v1::argument);
+    if (!parsed_.count(field) && argument.required()) {
+      CHECK(!argument.names().empty());
+      std::string names;
+      for (int i = 0; i < argument.names().size(); i++) {
+        if (i == 1) {
+          names += " (aka ";
+        } else if (i > 1) {
+          names += ", ";
+        }
+        names += "'" + argument.names().at(i) + "'";
+      }
+      if (argument.names().size() > 1) {
+        names += ")";
+      }
+      errors.insert(
+          "Positional argument " + names + " not parsed but required");
+    }
+  }
+
+  if (!errors.empty()) {
+    std::cerr
+        << program_name_ << ": "
+        << "Failed while parsing positional arguments:"
+        << std::endl
+        << std::endl;
+    for (const auto& error : errors) {
+      std::cerr << "* " << error
+                << std::endl
+                << std::endl;
+    }
+    std::exit(1);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////

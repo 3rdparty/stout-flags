@@ -406,3 +406,78 @@ message DuplicateEnclosingFlagName {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+message Rename {
+  string cur_file_name = 1 [
+    (stout.v1.argument) = {
+      names: [ "cur_file_name", "current_file", "cur_file" ]
+      help: "help"
+      required: true
+      position: 1
+    }
+  ];
+
+  string new_file_name = 2 [
+    (stout.v1.argument) = {
+      names: [ "new_file_name", "new_file" ]
+      help: "help"
+      required: true
+      position: 2
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message BuildFile {
+  bool debug_mode = 1 [
+    (stout.v1.flag) = {
+      names: [ "debug_mode", "debug" ]
+      help: "help"
+    }
+  ];
+
+  string file = 2 [
+    (stout.v1.argument) = {
+      names: [ "file", "file_name" ]
+      help: "help"
+      required: true
+      position: 1
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message ProcessFile {
+  oneof subcommand {
+    BuildFile build = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "build" ]
+        help: "help"
+      }
+    ];
+
+    Rename rename = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "rename" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message IllegalPositionalArg {
+  int32 num = 1 [
+    (stout.v1.argument) = {
+      names: [ "num" ]
+      help: "help"
+      required: false
+      position: 1
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////
