@@ -86,6 +86,7 @@ void Parser::AddAllOrExit(google::protobuf::Message* message) {
                     << "must have string type" << std::endl;
           std::exit(1);
         }
+
         const auto& argument =
             field->options().GetExtension(stout::v1::argument);
 
@@ -298,10 +299,11 @@ void Parser::Parse(int* argc, const char*** argv) {
     }
   }
 
-  // Parse positional arguments.
-  TryParsePositionalArguments();
   // Parse flags.
   Parse(values);
+
+  // Parse positional arguments.
+  TryParsePositionalArguments();
 
   // Update 'argc' and 'argv' if we successfully loaded the flags.
   CHECK_LE(args.size(), (size_t) *argc);
@@ -605,67 +607,248 @@ void Parser::Parse(
 
 ////////////////////////////////////////////////////////////////////////
 
-void Parser::PrintHelp() {
-  const int PAD = 5;
+void Parser::FillTopLevelHelpNode(google::protobuf::Message* message) {
+  const google::protobuf::Descriptor* descriptor =
+      message->GetDescriptor();
 
-  std::string help = "Usage: " + program_name_ + " [...]\n\n";
+  help_nodes_.emplace_back(
+      HelpNode{
+          descriptor,
+          std::vector<SubcommandHelp>{}});
 
-  std::map<std::string, std::string> col1; // key -> col 1 string.
+  for (int i = 0; i < descriptor->field_count(); ++i) {
+    const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+    if (field->real_containing_oneof()) {
+      CHECK(help_nodes_.size() == 1u);
+      help_nodes_[0].subcommands.emplace_back(SubcommandHelp{0u, field});
+    }
+  }
+}
 
-  // Construct string for the first column and store width of column.
-  size_t width = 0;
+////////////////////////////////////////////////////////////////////////
 
-  for (const auto& [_, field] : fields_) {
-    const auto& flag = field->options().GetExtension(stout::v1::flag);
+void Parser::FillHelpNode(
+    const google::protobuf::Descriptor* descriptor,
+    std::vector<SubcommandHelp>& subcommands,
+    std::size_t indent) {
+  CHECK(descriptor);
 
-    const bool boolean =
-        field->type() == google::protobuf::FieldDescriptor::TYPE_BOOL;
+  for (int i = 0; i < descriptor->field_count(); ++i) {
+    const google::protobuf::FieldDescriptor* field = descriptor->field(i);
 
-    std::string id;
-    for (const std::string& name : flag.names()) {
-      if (id == "") {
-        id = name;
-        col1[id] += " ";
-      } else {
-        col1[id] += ", ";
-      }
-
-      if (boolean) {
-        col1[id] += " --[no-]" + name;
-      } else {
-        col1[id] += " --" + name + "=...";
+    if (field->real_containing_oneof()) {
+      const auto iterator = std::find_if(
+          subcommands.begin(),
+          subcommands.end(),
+          [&field](const auto& node) {
+            return field == node.field;
+          });
+      if (iterator == subcommands.end()) {
+        subcommands.emplace_back(SubcommandHelp{indent + step_, field});
+        FillHelpNode(field->message_type(), subcommands, step_);
       }
     }
-    width = std::max(width, col1[id].size());
+  }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void Parser::FillHelpNodes() {
+  for (const auto& node : help_nodes_[0].subcommands) {
+    help_nodes_.emplace_back(
+        HelpNode{
+            node.field->message_type(),
+            std::vector<SubcommandHelp>{}});
+    FillHelpNode(
+        node.field->message_type(),
+        help_nodes_[help_nodes_.size() - 1].subcommands,
+        0u);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void Parser::PrintHelp() {
+  std::string help = "Usage:\n\n";
+
+  std::string general_help{program_name_ + " [...]"};
+
+  std::size_t indent = 0;
+
+  std::vector<std::string> subcommands_with_cur_indent;
+
+  // Helper for avoiding duplicate names for general help.
+  std::set<std::string> general_help_names;
+
+  bool again = false;
+
+  // Prepare firstly general help information.
+  for (std::size_t i = 0; i < help_nodes_.size(); ++i) {
+    for (std::size_t j = 0; j < help_nodes_[i].subcommands.size(); ++j) {
+      if (indent == help_nodes_[i].subcommands[j].indent) {
+        again = true;
+        subcommands_with_cur_indent.push_back(
+            help_nodes_[i].subcommands[j].field->name());
+      }
+    }
+
+    if (i == help_nodes_.size() - 1) {
+      for (std::size_t k = 0; k < subcommands_with_cur_indent.size(); ++k) {
+        bool duplicate =
+            general_help_names.count(subcommands_with_cur_indent[k]) >= 1;
+        if (subcommands_with_cur_indent.size() == 1) {
+          if (duplicate) {
+            continue;
+          }
+          general_help +=
+              " {" + subcommands_with_cur_indent[k] + "} [...]";
+        } else if (k == subcommands_with_cur_indent.size() - 1) {
+          if (duplicate) {
+            general_help += "} [...]";
+            continue;
+          }
+          general_help +=
+              "|" + subcommands_with_cur_indent[k] + "} [...]";
+        } else if (k == 0) {
+          if (duplicate) {
+            general_help += "{";
+            continue;
+          }
+          general_help +=
+              " {" + subcommands_with_cur_indent[k];
+        } else {
+          if (duplicate) {
+            continue;
+          }
+          general_help +=
+              "|" + subcommands_with_cur_indent[k];
+        }
+        general_help_names.insert(subcommands_with_cur_indent[k]);
+      }
+      subcommands_with_cur_indent.clear();
+    }
+
+    if (again && i == help_nodes_.size() - 1) {
+      again = false;
+      i = -1;
+      indent += step_;
+    }
   }
 
-  // TODO(benh): print the help on the next line instead of on the
-  // same line as the names.
-  for (const auto& [_, field] : fields_) {
-    const auto& flag = field->options().GetExtension(stout::v1::flag);
+  help += general_help + "\n\n";
+  help += "[...] - flags or positional arguments\n\n";
 
-    CHECK(!flag.names().empty());
+  if (help_nodes_.size() > 1) {
+    help += "{...|...} - subcommands\n\n";
+    help +=
+        "NOTE: subcommands must follow in correct order.\n"
+        "REMEMBER, only one subcommand from the list {...}\n"
+        "can be set at a time!\n"
+        "Check more specific information about the\n"
+        "subcommands below.\n\n";
+  }
 
-    const std::string id = flag.names().at(0);
+  // Prepare specific information about flags, positional arguments and
+  // subcommands.
+  indent = 0;
 
-    std::string line = col1[id];
+  // Print standard flags help.
+  const auto* standart_descriptor = standard_flags_->GetDescriptor();
+  for (int k = 0; k < standart_descriptor->field_count(); ++k) {
+    const auto* standart_field = standart_descriptor->field(k);
 
-    std::string pad(PAD + width - line.size(), ' ');
-    line += pad;
+    const auto& flag =
+        standart_field->options().GetExtension(stout::v1::flag);
 
-    size_t pos1 = 0, pos2 = 0;
-    pos2 = flag.help().find_first_of("\n\r", pos1);
-    line += flag.help().substr(pos1, pos2 - pos1) + "\n";
-    help += line;
+    const auto [name, help_info] =
+        GetHelpInfoFromField(&flag, standart_field);
 
-    while (pos2 != std::string::npos) { // Handle multi-line help strings.
-      line = "";
-      pos1 = pos2 + 1;
-      std::string pad2(PAD + width, ' ');
-      line += pad2;
-      pos2 = flag.help().find_first_of("\n\r", pos1);
-      line += flag.help().substr(pos1, pos2 - pos1) + "\n";
-      help += line;
+    help +=
+        std::string(indent, ' ') + name
+        + std::string(step_, ' ') + help_info + "\n";
+  }
+
+  auto SetHelpInfoForDescriptor =
+      [this](
+          const google::protobuf::Descriptor* descriptor,
+          std::string& help,
+          std::size_t indent) {
+        for (int j = 0; j < descriptor->field_count(); ++j) {
+          const auto* field = descriptor->field(j);
+          if (field->options().HasExtension(stout::v1::subcommand)) {
+            continue;
+          }
+          if (field->options().HasExtension(stout::v1::flag)) {
+            const auto& flag = field->options().GetExtension(stout::v1::flag);
+            const auto [name, help_info] = GetHelpInfoFromField(&flag, field);
+            help +=
+                std::string(indent, ' ') + name
+                + std::string(step_, ' ') + help_info + "\n";
+          }
+          if (field->options().HasExtension(stout::v1::argument)) {
+            const auto& argument =
+                field->options().GetExtension(stout::v1::argument);
+            const auto [name, help_info] =
+                GetHelpInfoFromField(&argument, field);
+            help +=
+                std::string(indent, ' ') + name
+                + std::string(step_, ' ') + help_info + "\n";
+          }
+        }
+      };
+
+  auto SetHelpInfoForSubcommandField =
+      [this](
+          const google::protobuf::FieldDescriptor* field,
+          std::string& help,
+          std::size_t indent) {
+        const auto& subcommand =
+            field->options().GetExtension(stout::v1::subcommand);
+        const auto [name, help_info] =
+            GetHelpInfoFromField(&subcommand, field);
+        help +=
+            std::string(indent, ' ') + name
+            + std::string(step_, ' ') + help_info + "\n";
+      };
+
+  std::vector<SubcommandHelp> top_level_subcommands =
+      (help_nodes_[0].subcommands.size())
+      ? help_nodes_[0].subcommands
+      : std::vector<SubcommandHelp>{};
+
+  // Print flags|pos args|subcommands help.
+  for (std::size_t i = 0; i < help_nodes_.size(); ++i) {
+    // Print help info for subcommand.
+    if (i && top_level_subcommands.size()) {
+      SetHelpInfoForSubcommandField(
+          top_level_subcommands[i - 1].field,
+          help,
+          top_level_subcommands[i - 1].indent);
+      SetHelpInfoForDescriptor(
+          help_nodes_[i].descriptor,
+          help,
+          step_);
+    }
+    if (!i) {
+      SetHelpInfoForDescriptor(
+          help_nodes_[i].descriptor,
+          help,
+          0u);
+    }
+
+    for (std::size_t j = 0; j < help_nodes_[i].subcommands.size(); ++j) {
+      if (!i) {
+        break;
+      }
+      SetHelpInfoForSubcommandField(
+          help_nodes_[i].subcommands[j].field,
+          help,
+          help_nodes_[i].subcommands[j].indent);
+      // Print flags|pos args help info for subcommand fields.
+      SetHelpInfoForDescriptor(
+          help_nodes_[i].subcommands[j].field->message_type(),
+          help,
+          help_nodes_[i].subcommands[j].indent + step_);
     }
   }
 

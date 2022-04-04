@@ -481,3 +481,203 @@ message IllegalPositionalArg {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+message TopLevel {
+  oneof subcommand {
+    A1 a1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "a1" ]
+        help: "help"
+      }
+    ];
+
+    A2 a2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "a2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message A1 {
+  oneof subcommand {
+    B1 b1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "b1" ]
+        help: "help"
+      }
+    ];
+
+    B2 b2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "b2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message A2 {
+  oneof subcommand {
+    C1 c1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "c1" ]
+        help: "help"
+      }
+    ];
+
+    C2 c2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "c2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message B1 {
+  oneof subcommand {
+    D1 d1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "d1" ]
+        help: "help"
+      }
+    ];
+
+    D2 d2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "d2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message B2 {
+  oneof subcommand {
+    E1 e1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "e1" ]
+        help: "help"
+      }
+    ];
+
+    E2 e2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "e2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message C1 {
+  oneof subcommand {
+    F1 f1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "f1" ]
+        help: "help"
+      }
+    ];
+
+    F2 f2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "f2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message C2 {
+  oneof subcommand {
+    G1 g1 = 1 [
+      (stout.v1.subcommand) = {
+        names: [ "g1" ]
+        help: "help"
+      }
+    ];
+
+    G2 g2 = 2 [
+      (stout.v1.subcommand) = {
+        names: [ "g2" ]
+        help: "help"
+      }
+    ];
+  }
+}
+
+message D1 {
+  int32 d1 = 1 [
+    (stout.v1.flag) = {
+      names: [ "d1" ]
+      help: "help"
+    }
+  ];
+}
+
+message D2 {
+  int32 d2 = 1 [
+    (stout.v1.flag) = {
+      names: [ "d2" ]
+      help: "help"
+    }
+  ];
+}
+
+message E1 {
+  int32 e1 = 1 [
+    (stout.v1.flag) = {
+      names: [ "e1" ]
+      help: "help"
+    }
+  ];
+}
+
+message E2 {
+  int32 e2 = 1 [
+    (stout.v1.flag) = {
+      names: [ "e2" ]
+      help: "help"
+    }
+  ];
+}
+
+message F1 {
+  int32 f1 = 1 [
+    (stout.v1.flag) = {
+      names: [ "f1" ]
+      help: "help"
+    }
+  ];
+}
+
+message F2 {
+  int32 f2 = 1 [
+    (stout.v1.flag) = {
+      names: [ "f2" ]
+      help: "help"
+    }
+  ];
+}
+
+message G1 {
+  int32 g1 = 1 [
+    (stout.v1.flag) = {
+      names: [ "g1" ]
+      help: "help"
+    }
+  ];
+}
+
+message G2 {
+  int32 g2 = 1 [
+    (stout.v1.flag) = {
+      names: [ "g2" ]
+      help: "help"
+    }
+  ];
+}
+
+///////////////////////////////////////////////////////////////////////////////

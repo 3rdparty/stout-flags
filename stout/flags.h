@@ -2,6 +2,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "absl/time/time.h"
 #include "google/protobuf/descriptor.h"
@@ -112,6 +113,65 @@ class Parser {
   // Helper for parsing positional arguments.
   void TryParsePositionalArguments();
 
+  void FillTopLevelHelpNode(google::protobuf::Message* message);
+
+  struct SubcommandHelp;
+
+  void FillHelpNode(
+      const google::protobuf::Descriptor* descriptor,
+      std::vector<SubcommandHelp>& subcommands,
+      std::size_t indent);
+
+  // Fill help_nodes_ for the message.
+  void FillHelpNodes();
+
+  template <typename T>
+  std::pair<std::string, std::string> GetHelpInfoFromField(
+      const T* field_extension,
+      const google::protobuf::FieldDescriptor* field) {
+    /* clang-format off */
+    if (!std::is_same_v<const stout::v1::Flag*, decltype(field_extension)> &&
+        !std::is_same_v<const stout::v1::Argument*,
+                        decltype(field_extension)> &&
+        !std::is_same_v<const stout::v1::Subcommand*,
+                        decltype(field_extension)>){
+      std::cerr << "Expected 'const stout::v1::Flag*' " 
+                << "or 'const stout::v1::Argument*' type"
+                << "or 'const stout::v1::Subcommand*' type"
+                << std::endl;
+      exit(1);
+    }
+    /* clang-format on */
+
+    std::string flag_name;
+
+    const bool boolean =
+        field->type() == google::protobuf::FieldDescriptor::TYPE_BOOL;
+
+    std::string prefix = (boolean) ? "--(no-)" : "--";
+    std::string postfix{""};
+
+    if (field->options().HasExtension(stout::v1::argument)
+        || field->options().HasExtension(stout::v1::subcommand)) {
+      prefix = "";
+    }
+    if (field->options().HasExtension(stout::v1::flag) && !boolean) {
+      postfix += "=...";
+    }
+
+    for (int i = 0; i < field_extension->names().size(); ++i) {
+      if (!i) {
+        flag_name += prefix + field_extension->names()[i] + postfix;
+      } else {
+        flag_name += ", " + prefix + field_extension->names()[i] + postfix;
+      }
+    }
+
+    return std::pair<std::string, std::string>{
+        flag_name,
+        field_extension->help()};
+  }
+
   // Helper that prints out help for the flags for this parser.
   void PrintHelp();
 
@@ -124,10 +184,6 @@ class Parser {
 
   // Map from flag name to the field descriptor for the flag.
   std::map<std::string, const google::protobuf::FieldDescriptor*> fields_;
-
-  // Map from positional argument value to the field descriptor for this name.
-  // std::map<std::string, const google::protobuf::FieldDescriptor*>
-  //     pos_arg_fields_;
 
   // Map from field pointer to the value of a positional argument.
   std::map<
@@ -167,6 +223,24 @@ class Parser {
     std::string text;
   };
 
+  struct SubcommandHelp {
+    std::size_t indent;
+    const google::protobuf::FieldDescriptor* field;
+  };
+
+  // Helper struct for printing the message's help.
+  struct HelpNode {
+    // Descriptor for the current level subcommand.
+    const google::protobuf::Descriptor* descriptor;
+
+    // Vector for containing subcommand descriptor's chain.
+    std::vector<SubcommandHelp> subcommands;
+  };
+
+  // Vector for containing all recursive nodes of the message
+  // for printing help.
+  std::vector<HelpNode> help_nodes_;
+
   // Map from field descriptor to the helper struct 'Parsed' for
   // capturing what flags or positional arguments have already
   // been parsed.
@@ -191,6 +265,8 @@ class Parser {
   // increased when a new positional argument arrives.
   std::size_t cur_index_pos_arg_ = 1;
 
+  const std::size_t step_ = 5;
+
   // This flag will be set to true when the first subcommand was encountered.
   bool parsing_subcommand_flags_ = false;
 };
@@ -203,6 +279,8 @@ class ParserBuilder {
   ParserBuilder(Flags* flags)
     : flags_(flags) {
     parser_.AddAllOrExit(flags_);
+    parser_.FillTopLevelHelpNode(flags_);
+    parser_.FillHelpNodes();
   }
 
   // Overloads the parsing of the specified type 'T' with the
