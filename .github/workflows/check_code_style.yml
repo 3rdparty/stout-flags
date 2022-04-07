@@ -9,11 +9,9 @@ on:
   push:
     branches:
       - "main"
-    paths-ignore:
-      - "**.md"
   pull_request:
-    paths-ignore:
-      - "**.md"   
+    branches:
+      - "**"
 
 jobs:
   check_code_style:
@@ -21,12 +19,12 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest"]
-        
+
     steps:
       # We should checkout the repo with submodules
-      # cause we need to have symlink to 
+      # cause we need to have symlink to
       # dev-tools/.clang-format file for all code
-      # style checks.   
+      # style checks.
       - uses: actions/checkout@v2
         with:
           submodules: 'recursive'
@@ -36,7 +34,7 @@ jobs:
       # is in `./dev-tools/check-code-style` submodule's
       # directory from the current submodule commit.
       - uses: ./dev-tools/check-code-style
-        with: 
+        with:
           os: ${{matrix.os}}
 
       - name: Debug using tmate (if failure)
