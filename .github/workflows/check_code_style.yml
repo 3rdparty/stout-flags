@@ -36,7 +36,3 @@ jobs:
       - uses: ./dev-tools/check-code-style
         with:
           os: ${{matrix.os}}
-
-      - name: Debug using tmate (if failure)
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
