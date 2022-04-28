@@ -31,7 +31,7 @@ def repos(external = True, repo_mapping = {}):
             git_repository,
             name = "com_github_3rdparty_stout_flags",
             remote = "https://github.com/3rdparty/stout-flags",
-            commit = "",
-            shallow_since = "",
+            commit = "e8494b75ff818d4c85d4122302d94afbc533aa80",
+            shallow_since = "1649367946 +0000",
             repo_mapping = repo_mapping,
         )
