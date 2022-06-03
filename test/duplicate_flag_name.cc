@@ -8,7 +8,7 @@ TEST(FlagsTest, DuplicateFlagName) {
   EXPECT_DEATH(
       []() {
         test::DuplicateFlagName duplicate_flag_name;
-        auto builder = stout::flags::Parser::Builder(&duplicate_flag_name);
+        auto builder = stout::flags::Parser::Builder(duplicate_flag_name);
         builder.Build();
       }(),
       "Encountered duplicate flag name 'same' for message "
@@ -18,7 +18,7 @@ TEST(FlagsTest, DuplicateFlagName) {
 TEST(FlagsTest, DuplicateSucceed) {
   test::Flags flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "/path/to/program",
@@ -40,7 +40,7 @@ TEST(FlagsTest, DuplicateSucceed) {
 TEST(FlagsTest, DuplicateConflict) {
   test::DuplicateFlagsDeath duplicates;
 
-  auto parser = stout::flags::Parser::Builder(&duplicates).Build();
+  auto parser = stout::flags::Parser::Builder(duplicates).Build();
 
   std::array arguments = {
       "/path/to/program",
@@ -72,7 +72,7 @@ TEST(FlagsTest, DuplicateConflict) {
 TEST(FlagsTest, DuplicateNonBooleanFlags) {
   test::DuplicateFlagsDeath duplicates;
 
-  auto parser = stout::flags::Parser::Builder(&duplicates).Build();
+  auto parser = stout::flags::Parser::Builder(duplicates).Build();
 
   std::array arguments = {
       "/path/to/program",
