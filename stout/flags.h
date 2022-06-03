@@ -100,7 +100,7 @@ class Parser {
       std::function<bool(google::protobuf::Message&)>>
       validate_;
 
-  // Command "basename" extracted from 'argv[0]'
+  // Command "basename" extracted from 'argv[0]'.
   std::string command_;
 
   // Helper struct for storing the parsed "name" and normalized
@@ -127,7 +127,7 @@ class Parser {
 
   // Message to populate when parsing. May be nullptr until parsing
   // for nested parsers because we won't know the pointer until
-  // parsing in the event the parent parse
+  // parsing in the event the parent parse.
   google::protobuf::Message* message_ = nullptr;
 };
 
