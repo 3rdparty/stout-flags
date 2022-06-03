@@ -8,7 +8,7 @@ TEST(FlagsTest, MissingSubcommandExtension) {
   EXPECT_DEATH(
       []() {
         test::SubcommandFlagsWithoutExtension flag;
-        auto builder = stout::flags::Parser::Builder(&flag);
+        auto builder = stout::flags::Parser::Builder(flag);
         builder.Build();
       }(),
       "Every field of the 'oneof subcommand' must be"
@@ -19,7 +19,7 @@ TEST(FlagsTest, IncorrectSubcommandExtension) {
   EXPECT_DEATH(
       []() {
         test::FlagsWithIncorrectExtension flag;
-        auto builder = stout::flags::Parser::Builder(&flag);
+        auto builder = stout::flags::Parser::Builder(flag);
         builder.Build();
       }(),
       "stout.v1.subcommand option should be annotated on fields"
@@ -30,7 +30,7 @@ TEST(FlagsTest, IncorrectOneofName) {
   EXPECT_DEATH(
       []() {
         test::IncorrectOneofName flag;
-        auto builder = stout::flags::Parser::Builder(&flag);
+        auto builder = stout::flags::Parser::Builder(flag);
         builder.Build();
       }(),
       "'oneof' field must have 'subcommand' name. "
@@ -41,7 +41,7 @@ TEST(FlagsTest, SubcommandFlagExtension) {
   EXPECT_DEATH(
       []() {
         test::SubcommandFlagExtension flag;
-        auto builder = stout::flags::Parser::Builder(&flag);
+        auto builder = stout::flags::Parser::Builder(flag);
         builder.Build();
       }(),
       "Every field of the 'oneof subcommand' must be"
@@ -52,7 +52,7 @@ TEST(FlagsTest, DuplicateSubcommandFields) {
   EXPECT_DEATH(
       []() {
         test::DuplicateSubcommandFields flag;
-        auto builder = stout::flags::Parser::Builder(&flag);
+        auto builder = stout::flags::Parser::Builder(flag);
         builder.Build();
       }(),
       "Encountered duplicate subcommand name 'build'"
@@ -62,7 +62,7 @@ TEST(FlagsTest, DuplicateSubcommandFields) {
 TEST(FlagsTest, SubcommandAndUnknownArguments) {
   test::SimpleSubcommandSucceed flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -93,7 +93,7 @@ TEST(FlagsTest, SubcommandAndUnknownArguments) {
 TEST(FlagsTest, SimpleSubcommandBuildSucceed) {
   test::SimpleSubcommandSucceed flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -117,7 +117,7 @@ TEST(FlagsTest, SimpleSubcommandBuildSucceed) {
 TEST(FlagsTest, SimpleSubcommandInfoSucceed) {
   test::SimpleSubcommandSucceed flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -141,7 +141,7 @@ TEST(FlagsTest, SimpleSubcommandInfoSucceed) {
 TEST(FlagsTest, DuplicateSubcommands) {
   test::SimpleSubcommandSucceed flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -163,7 +163,7 @@ TEST(FlagsTest, DuplicateSubcommands) {
 TEST(FlagsTest, DuplicateSubcommandFlags) {
   test::SimpleSubcommandSucceed flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -184,7 +184,7 @@ TEST(FlagsTest, DuplicateSubcommandFlags) {
 TEST(FlagsTest, DuplicateSubcommandFlagNameForEnclosingLevel) {
   test::DuplicateEnclosingFlagName flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -208,7 +208,7 @@ TEST(FlagsTest, DuplicateSubcommandFlagNameForEnclosingLevel) {
 TEST(FlagsTest, SubcommandFailSettingTwoOneofFlagsAtOnce) {
   test::SimpleSubcommandSucceed flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -230,7 +230,7 @@ TEST(FlagsTest, SubcommandFailSettingTwoOneofFlagsAtOnce) {
 TEST(FlagsTest, ComplicatedSubcommandSucceed1) {
   test::ComplicatedSubcommandMessage flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -264,7 +264,7 @@ TEST(FlagsTest, ComplicatedSubcommandSucceed1) {
 TEST(FlagsTest, ComplicatedSubcommandSucceed2) {
   test::ComplicatedSubcommandMessage flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -298,7 +298,7 @@ TEST(FlagsTest, ComplicatedSubcommandSucceed2) {
 TEST(FlagsTest, ComplicatedSubcommandSucceed3) {
   test::ComplicatedSubcommandMessage flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",
@@ -330,7 +330,7 @@ TEST(FlagsTest, ComplicatedSubcommandSucceed3) {
 TEST(FlagsTest, ComplicatedSubcommandSucceed4) {
   test::ComplicatedSubcommandMessage flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags).Build();
+  auto parser = stout::flags::Parser::Builder(flags).Build();
 
   std::array arguments = {
       "program",

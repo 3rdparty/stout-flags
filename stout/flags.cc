@@ -18,8 +18,8 @@ namespace stout::flags {
 
 ////////////////////////////////////////////////////////////////////////
 
-void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message* message) {
-  const auto* descriptor = message->GetDescriptor();
+void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message& message) {
+  const auto* descriptor = message.GetDescriptor();
 
   for (int i = 0; i < descriptor->field_count(); i++) {
     const auto* field = descriptor->field(i);
@@ -71,7 +71,7 @@ void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message* message) {
             if (!inserted) {
               std::cerr << "Encountered duplicate subcommand name "
                         << "'" << name << "' for message '"
-                        << message->GetTypeName() << "'"
+                        << message.GetTypeName() << "'"
                         << std::endl;
               std::exit(1);
             }
@@ -83,7 +83,7 @@ void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message* message) {
             if (!inserted) {
               std::cerr << "Encountered duplicate (deprecated) subcommand name "
                         << "'" << name << "' for message '"
-                        << message->GetTypeName() << "'"
+                        << message.GetTypeName() << "'"
                         << std::endl;
               std::exit(1);
             }
@@ -94,7 +94,7 @@ void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message* message) {
               field,
               std::make_unique<Parser>(
                   Parser::Builder(
-                      message->GetReflection()->MutableMessage(message, field),
+                      *message.GetReflection()->MutableMessage(&message, field),
                       true)
                       .Build()));
 
@@ -133,7 +133,7 @@ void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message* message) {
         if (!inserted) {
           std::cerr << "Encountered duplicate flag name "
                     << "'" << name << "' for message '"
-                    << message->GetTypeName() << "'"
+                    << message.GetTypeName() << "'"
                     << std::endl;
           std::exit(1);
         }
@@ -145,7 +145,7 @@ void Parser::AddFieldsAndSubcommandsOrExit(google::protobuf::Message* message) {
         if (!inserted) {
           std::cerr << "Encountered duplicate (deprecated) flag name "
                     << "'" << name << "' for message '"
-                    << message->GetTypeName() << "'"
+                    << message.GetTypeName() << "'"
                     << std::endl;
           std::exit(1);
         }
@@ -169,25 +169,25 @@ Parser* Parser::TryLookupParserForSubcommand(const std::string& name) {
 
 ////////////////////////////////////////////////////////////////////////
 
-google::protobuf::Message* Parser::GetMessageForField(
-    const google::protobuf::FieldDescriptor* field) {
-  if (field->containing_type() == standard_flags_->GetDescriptor()) {
-    return standard_flags_.get();
+google::protobuf::Message& Parser::GetMessageForField(
+    const google::protobuf::FieldDescriptor& field) {
+  if (field.containing_type() == standard_flags_->GetDescriptor()) {
+    return *standard_flags_;
   } else {
-    return CHECK_NOTNULL(message_);
+    return *CHECK_NOTNULL(message_);
   }
 }
 
 ////////////////////////////////////////////////////////////////////////
 
-google::protobuf::Message* Parser::GetMessageForSubcommand(
+google::protobuf::Message& Parser::GetMessageForSubcommand(
     const std::string& name) {
   // NOTE: precondition is that this is a valid subcommand!
   CHECK_NE(subcommand_fields_.count(name), 0);
   const google::protobuf::FieldDescriptor* field = subcommand_fields_[name];
-  return CHECK_NOTNULL(message_)
-      ->GetReflection()
-      ->MutableMessage(message_, field);
+  return *CHECK_NOTNULL(message_)
+              ->GetReflection()
+              ->MutableMessage(message_, field);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -240,7 +240,7 @@ void Parser::Parse(int* argc, const char*** argv) {
         // Current argument is a subcommand. So now we can set
         // 'google::protobuf::Message*' pointer for nested parser in
         // order to parse flags for this subcommand.
-        parser->message_ = GetMessageForSubcommand(arg);
+        parser->message_ = &GetMessageForSubcommand(arg);
 
         // Parsing arguments for 'nested' parser.
         parser->Parse(&nested_argc, &nested_argv);
@@ -435,11 +435,11 @@ void Parser::Parse(
 
     // Parse the value using an overloaded parser if provided.
     if (overload_parsing_.count(field->message_type()) > 0) {
-      auto* message = GetMessageForField(field);
+      auto& message = GetMessageForField(*field);
       std::optional<std::string> error =
           overload_parsing_[field->message_type()](
               text.value(),
-              message->GetReflection()->MutableMessage(message, field));
+              *message.GetReflection()->MutableMessage(&message, field));
 
       if (error) {
         errors.insert(
@@ -477,7 +477,7 @@ void Parser::Parse(
       if (!text_format_parser.ParseFieldValueFromString(
               text.value(),
               field,
-              GetMessageForField(field))) {
+              &GetMessageForField(*field))) {
         errors.insert(
             "Failed to parse flag '" + non_negated_name
             + "' from normalized value '" + text.value()
@@ -520,7 +520,7 @@ void Parser::Parse(
 
   // Perform validations.
   for (auto& [error, f] : validate_) {
-    if (!f(CHECK_NOTNULL(message_))) {
+    if (!f(*CHECK_NOTNULL(message_))) {
       errors.insert(error);
     }
   }

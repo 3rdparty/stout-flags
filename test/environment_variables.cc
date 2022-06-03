@@ -22,7 +22,7 @@ int unsetenv(const char* env_name) {
 TEST(FlagsTest, EnvironmentVariableString) {
   test::Flags flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags)
+  auto parser = stout::flags::Parser::Builder(flags)
                     .IncludeEnvironmentVariablesWithPrefix("STOUT_FLAGS_TEST")
                     .Build();
 
@@ -51,7 +51,7 @@ TEST(FlagsTest, EnvironmentVariableString) {
 TEST(FlagsTest, IncludeEnvironmentVariableWithUnderscoreFailure) {
   test::Flags flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags)
+  auto parser = stout::flags::Parser::Builder(flags)
                     .IncludeEnvironmentVariablesWithPrefix("STOUT_FLAGS_TEST_")
                     .Build();
 
@@ -83,7 +83,7 @@ TEST(FlagsTest, IncludeEnvironmentVariableWithUnderscoreFailure) {
 TEST(FlagsTest, EnvironmentVariableWithNoUnderlineInNameFailure) {
   test::Flags flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags)
+  auto parser = stout::flags::Parser::Builder(flags)
                     .IncludeEnvironmentVariablesWithPrefix("STOUT_FLAGS_TEST")
                     .Build();
 
@@ -113,7 +113,7 @@ TEST(FlagsTest, EnvironmentVariableWithNoUnderlineInNameFailure) {
 TEST(FlagsTest, EnvironmentVariableWith2Underscores) {
   test::Flags flags;
 
-  auto parser = stout::flags::Parser::Builder(&flags)
+  auto parser = stout::flags::Parser::Builder(flags)
                     .IncludeEnvironmentVariablesWithPrefix("STOUT_FLAGS_TEST_")
                     .Build();
 
